@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kiosk/models/product.dart';
 import 'package:kiosk/screens/customer/cart.dart';
+import 'package:kiosk/screens/model_selection.dart';
 
 class CustomerHomeScreen extends StatefulWidget {
   const CustomerHomeScreen({super.key});
@@ -19,7 +20,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   String? selectedTheme; // 장르
   String? selectedType; // 종류
-
+  int _tapCount = 0;
+  DateTime? _lastTapTime;
   @override
   void initState() {
     super.initState();
@@ -202,6 +204,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
+  void _goHome() {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => ModelSelectionScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -216,18 +226,29 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Container(
-                    width: double.infinity,
-                    height: 84,
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/logo/logo1.png'),
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                ),
+                    padding: const EdgeInsets.all(8.0),
+                    child: GestureDetector(
+                      onTap: () {
+                        final now = DateTime.now();
+
+                        if (_lastTapTime == null ||
+                            now.difference(_lastTapTime!) >
+                                Duration(seconds: 1)) {
+                          // 👉 1초 지나면 초기화
+                          _tapCount = 1;
+                        } else {
+                          _tapCount++;
+                        }
+
+                        _lastTapTime = now;
+
+                        if (_tapCount == 3) {
+                          _goHome();
+                          _tapCount = 0;
+                        }
+                      },
+                      child: Image.asset('assets/logo/logo1.png'),
+                    )),
                 const Spacer(),
               ],
             ),
