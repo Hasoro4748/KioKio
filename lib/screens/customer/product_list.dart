@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:kiosk/models/product.dart';
 import 'package:kiosk/screens/customer/cart.dart';
 import 'package:kiosk/screens/model_selection.dart';
@@ -54,143 +55,143 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         Product(
             id: '1',
             name: '상품1',
-            pTheme: '장르3',
-            pType: '종류2',
-            price: 2000,
-            imagePath: 'assets/products/num1.png'),
+            pTheme: '장르2',
+            pType: '종류3',
+            price: 1000,
+            imagePath: 'assets/products/num4.png'),
         Product(
             id: '2',
-            name: '상품2',
-            pTheme: '장르1',
+            name: '상품212312312312313121231231231231231231312123123',
+            pTheme: '장르7',
             pType: '종류1',
             price: 3000,
             imagePath: 'assets/products/num2.png'),
         Product(
             id: '3',
             name: '상품3',
-            pTheme: '장르5',
-            pType: '종류3',
-            price: 1000,
-            imagePath: 'assets/products/num3.png'),
+            pTheme: '장르1',
+            pType: '종류2',
+            price: 2000,
+            imagePath: 'assets/products/num6.png'),
         Product(
             id: '4',
             name: '상품4',
-            pTheme: '장르2',
-            pType: '종류2',
-            price: 2000,
+            pTheme: '장르5',
+            pType: '종류3',
+            price: 1000,
             imagePath: 'assets/products/num1.png'),
         Product(
             id: '5',
             name: '상품5',
-            pTheme: '장르7',
-            pType: '종류1',
-            price: 3000,
-            imagePath: 'assets/products/num2.png'),
-        Product(
-            id: '6',
-            name: '상품6',
-            pTheme: '장르4',
-            pType: '종류3',
-            price: 1000,
-            imagePath: 'assets/products/num3.png'),
-        Product(
-            id: '7',
-            name: '상품7',
-            pTheme: '장르6',
-            pType: '종류2',
-            price: 2000,
-            imagePath: 'assets/products/num1.png'),
-        Product(
-            id: '8',
-            name: '상품8',
-            pTheme: '장르8',
-            pType: '종류1',
-            price: 3000,
-            imagePath: 'assets/products/num2.png'),
-        Product(
-            id: '9',
-            name: '상품9',
-            pTheme: '장르1',
-            pType: '종류3',
-            price: 1000,
-            imagePath: 'assets/products/num3.png'),
-        Product(
-            id: '10',
-            name: '상품10',
-            pTheme: '장르2',
-            pType: '종류2',
-            price: 2000,
-            imagePath: 'assets/products/num1.png'),
-        Product(
-            id: '11',
-            name: '상품11',
             pTheme: '장르3',
             pType: '종류1',
             price: 3000,
-            imagePath: 'assets/products/num2.png'),
+            imagePath: 'assets/products/num7.png'),
         Product(
-            id: '12',
-            name: '상품12',
+            id: '6',
+            name: '상품6',
+            pTheme: '장르8',
+            pType: '종류2',
+            price: 2000,
+            imagePath: 'assets/products/num5.png'),
+        Product(
+            id: '7',
+            name: '상품7',
             pTheme: '장르4',
             pType: '종류3',
             price: 1000,
             imagePath: 'assets/products/num3.png'),
         Product(
-            id: '13',
-            name: '상품13',
+            id: '8',
+            name: '상품8',
+            pTheme: '장르6',
+            pType: '종류1',
+            price: 3000,
+            imagePath: 'assets/products/num4.png'),
+        Product(
+            id: '9',
+            name: '상품9',
+            pTheme: '장르2',
+            pType: '종류2',
+            price: 2000,
+            imagePath: 'assets/products/num2.png'),
+        Product(
+            id: '10',
+            name: '상품10',
+            pTheme: '장르7',
+            pType: '종류3',
+            price: 1000,
+            imagePath: 'assets/products/num6.png'),
+        Product(
+            id: '11',
+            name: '상품11',
+            pTheme: '장르1',
+            pType: '종류1',
+            price: 3000,
+            imagePath: 'assets/products/num7.png'),
+        Product(
+            id: '12',
+            name: '상품12',
             pTheme: '장르5',
             pType: '종류2',
             price: 2000,
             imagePath: 'assets/products/num1.png'),
         Product(
+            id: '13',
+            name: '상품13',
+            pTheme: '장르3',
+            pType: '종류3',
+            price: 1000,
+            imagePath: 'assets/products/num5.png'),
+        Product(
             id: '14',
             name: '상품14',
-            pTheme: '장르6',
+            pTheme: '장르8',
             pType: '종류1',
             price: 3000,
-            imagePath: 'assets/products/num2.png'),
+            imagePath: 'assets/products/num3.png'),
         Product(
             id: '15',
             name: '상품15',
-            pTheme: '장르7',
-            pType: '종류3',
-            price: 1000,
-            imagePath: 'assets/products/num3.png'),
+            pTheme: '장르4',
+            pType: '종류2',
+            price: 2000,
+            imagePath: 'assets/products/num4.png'),
         Product(
             id: '16',
             name: '상품16',
-            pTheme: '장르8',
-            pType: '종류2',
-            price: 2000,
-            imagePath: 'assets/products/num1.png'),
+            pTheme: '장르6',
+            pType: '종류3',
+            price: 1000,
+            imagePath: 'assets/products/num2.png'),
         Product(
             id: '17',
             name: '상품17',
-            pTheme: '장르1',
+            pTheme: '장르2',
             pType: '종류1',
             price: 3000,
-            imagePath: 'assets/products/num2.png'),
+            imagePath: 'assets/products/num6.png'),
         Product(
             id: '18',
             name: '상품18',
-            pTheme: '장르2',
-            pType: '종류3',
-            price: 1000,
-            imagePath: 'assets/products/num3.png'),
+            pTheme: '장르7',
+            pType: '종류2',
+            price: 2000,
+            imagePath: 'assets/products/num7.png'),
         Product(
             id: '19',
             name: '상품19',
-            pTheme: '장르3',
-            pType: '종류2',
-            price: 2000,
+            pTheme: '장르1',
+            pType: '종류3',
+            price: 1000,
             imagePath: 'assets/products/num1.png'),
         Product(
             id: '20',
             name: '상품20',
-            pTheme: '장르4',
+            pTheme: '장르5',
             pType: '종류1',
             price: 3000,
-            imagePath: 'assets/products/num2.png'),
+            imagePath: 'assets/products/num5.png'),
       ];
     });
   }
@@ -210,6 +211,25 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       MaterialPageRoute(builder: (_) => ModelSelectionScreen()),
       (route) => false,
     );
+  }
+
+  int _totalValue() {
+    return cart.fold(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
+  }
+
+  int _totalPrice() {
+    return cart.fold(
+      0,
+      (sum, item) => sum + item.product.price * item.quantity,
+    );
+  }
+
+  String _moneyIndicator(int price) {
+    final formatter = NumberFormat('#,###');
+    return formatter.format(price);
   }
 
   @override
@@ -450,11 +470,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               padding: EdgeInsets.all(12),
               child: Column(
                 children: [
-                  Text(product.name,
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    product.name,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   SizedBox(height: 4),
-                  Text('${product.price.toString()}원',
+                  Text('${_moneyIndicator(product.price)}원',
                       style: TextStyle(fontSize: 16, color: Colors.orange)),
                 ],
               ),
@@ -556,7 +579,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
-                    Text(item.product.name),
+                    Container(
+                      width: 145,
+                      child: Text(
+                        item.product.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     const SizedBox(width: 16),
                     IconButton(
                       onPressed: item.quantity > 1
@@ -572,7 +602,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             },
                       icon: const Icon(Icons.remove_circle),
                     ),
-                    Text('${item.quantity}개'),
+                    Container(width: 35, child: Text('${item.quantity}개')),
                     IconButton(
                       onPressed: item.quantity > 0 //max 로 변경 필요
                           ? () {
@@ -584,7 +614,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       icon: const Icon(Icons.add_circle),
                     ),
                     const Spacer(),
-                    Text('${item.product.price * item.quantity}원'),
+                    Text(
+                        '${_moneyIndicator(item.product.price * item.quantity)}원'),
                   ],
                 ),
               );
@@ -606,7 +637,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   ),
                   const SizedBox(width: 32),
                   Text(
-                    '총 금액: ${_totalPrice()}원',
+                    '총 금액: ${_moneyIndicator(_totalPrice())}원',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
@@ -622,20 +653,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           ),
         )
       ],
-    );
-  }
-
-  int _totalValue() {
-    return cart.fold(
-      0,
-      (sum, item) => sum + item.quantity,
-    );
-  }
-
-  int _totalPrice() {
-    return cart.fold(
-      0,
-      (sum, item) => sum + item.product.price * item.quantity,
     );
   }
 
@@ -749,7 +766,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        '가격: ${product.price}원',
+                                        '가격: ${_moneyIndicator(product.price)}원',
                                         style: const TextStyle(
                                           fontSize: 18,
                                           color: Colors.orange,
