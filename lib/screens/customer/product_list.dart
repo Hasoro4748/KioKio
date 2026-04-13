@@ -1,12 +1,15 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:kiosk/models/order.dart';
 import 'package:kiosk/models/product.dart';
 import 'package:kiosk/screens/customer/cart.dart';
 import 'package:kiosk/screens/model_selection.dart';
+import 'package:path_provider/path_provider.dart';
 
 class CustomerHomeScreen extends StatefulWidget {
   const CustomerHomeScreen({super.key});
@@ -17,7 +20,7 @@ class CustomerHomeScreen extends StatefulWidget {
 
 class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   List<Product> products = []; //  상품 리스트
-  List<CartItem> cart = []; //  장바구니 목록
+  List<OrderItem> cart = []; //  장바구니 목록
 
   String? selectedTheme; // 장르
   String? selectedType; // 종류
@@ -27,6 +30,32 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   void initState() {
     super.initState();
     _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/files/products.json');
+
+    if (!await file.exists()) {
+      final folder = Directory(file.parent.path);
+
+      if (!await folder.exists()) {
+        await folder.create(recursive: true);
+      }
+
+      // 🔥 없으면 assets에서 복사 추후 수정 ‼️‼️‼️‼️
+      final jsonString =
+          await rootBundle.loadString('assets/files/products.json');
+
+      await file.writeAsString(jsonString);
+    }
+
+    final jsonString = await file.readAsString();
+    final List<dynamic> jsonList = jsonDecode(jsonString);
+
+    setState(() {
+      products = jsonList.map((e) => Product.fromJson(e)).toList();
+    });
   }
 
   List<String> get themes {
@@ -49,156 +78,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     }).toList();
   }
 
-  void _loadProducts() {
-    setState(() {
-      products = [
-        Product(
-            id: '1',
-            name: '상품1',
-            pTheme: '장르2',
-            pType: '종류3',
-            price: 1000,
-            imagePath: 'assets/products/num4.png'),
-        Product(
-            id: '2',
-            name: '상품212312312312313121231231231231231231312123123',
-            pTheme: '장르7',
-            pType: '종류1',
-            price: 3000,
-            imagePath: 'assets/products/num2.png'),
-        Product(
-            id: '3',
-            name: '상품3',
-            pTheme: '장르1',
-            pType: '종류2',
-            price: 2000,
-            imagePath: 'assets/products/num6.png'),
-        Product(
-            id: '4',
-            name: '상품4',
-            pTheme: '장르5',
-            pType: '종류3',
-            price: 1000,
-            imagePath: 'assets/products/num1.png'),
-        Product(
-            id: '5',
-            name: '상품5',
-            pTheme: '장르3',
-            pType: '종류1',
-            price: 3000,
-            imagePath: 'assets/products/num7.png'),
-        Product(
-            id: '6',
-            name: '상품6',
-            pTheme: '장르8',
-            pType: '종류2',
-            price: 2000,
-            imagePath: 'assets/products/num5.png'),
-        Product(
-            id: '7',
-            name: '상품7',
-            pTheme: '장르4',
-            pType: '종류3',
-            price: 1000,
-            imagePath: 'assets/products/num3.png'),
-        Product(
-            id: '8',
-            name: '상품8',
-            pTheme: '장르6',
-            pType: '종류1',
-            price: 3000,
-            imagePath: 'assets/products/num4.png'),
-        Product(
-            id: '9',
-            name: '상품9',
-            pTheme: '장르2',
-            pType: '종류2',
-            price: 2000,
-            imagePath: 'assets/products/num2.png'),
-        Product(
-            id: '10',
-            name: '상품10',
-            pTheme: '장르7',
-            pType: '종류3',
-            price: 1000,
-            imagePath: 'assets/products/num6.png'),
-        Product(
-            id: '11',
-            name: '상품11',
-            pTheme: '장르1',
-            pType: '종류1',
-            price: 3000,
-            imagePath: 'assets/products/num7.png'),
-        Product(
-            id: '12',
-            name: '상품12',
-            pTheme: '장르5',
-            pType: '종류2',
-            price: 2000,
-            imagePath: 'assets/products/num1.png'),
-        Product(
-            id: '13',
-            name: '상품13',
-            pTheme: '장르3',
-            pType: '종류3',
-            price: 1000,
-            imagePath: 'assets/products/num5.png'),
-        Product(
-            id: '14',
-            name: '상품14',
-            pTheme: '장르8',
-            pType: '종류1',
-            price: 3000,
-            imagePath: 'assets/products/num3.png'),
-        Product(
-            id: '15',
-            name: '상품15',
-            pTheme: '장르4',
-            pType: '종류2',
-            price: 2000,
-            imagePath: 'assets/products/num4.png'),
-        Product(
-            id: '16',
-            name: '상품16',
-            pTheme: '장르6',
-            pType: '종류3',
-            price: 1000,
-            imagePath: 'assets/products/num2.png'),
-        Product(
-            id: '17',
-            name: '상품17',
-            pTheme: '장르2',
-            pType: '종류1',
-            price: 3000,
-            imagePath: 'assets/products/num6.png'),
-        Product(
-            id: '18',
-            name: '상품18',
-            pTheme: '장르7',
-            pType: '종류2',
-            price: 2000,
-            imagePath: 'assets/products/num7.png'),
-        Product(
-            id: '19',
-            name: '상품19',
-            pTheme: '장르1',
-            pType: '종류3',
-            price: 1000,
-            imagePath: 'assets/products/num1.png'),
-        Product(
-            id: '20',
-            name: '상품20',
-            pTheme: '장르5',
-            pType: '종류1',
-            price: 3000,
-            imagePath: 'assets/products/num5.png'),
-      ];
-    });
-  }
-
   void _addToCart(Product product) {
     setState(() {
-      cart.add(CartItem(product: product, quantity: 1));
+      cart.add(OrderItem(product: product, quantity: 1));
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${product.name} 상품을 장바구니에 담았습니다.')),
@@ -230,6 +112,35 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   String _moneyIndicator(int price) {
     final formatter = NumberFormat('#,###');
     return formatter.format(price);
+  }
+
+  void checkout() async {
+    final order = Order(
+      id: DateTime.now().toString(),
+      items: List.from(cart),
+      createdAt: DateTime.now(),
+    );
+
+    await saveOrder(order);
+
+    setState(() {
+      cart.clear();
+    });
+  }
+
+  Future<void> saveOrder(Order order) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/files/orders.json');
+
+    List orders = [];
+
+    if (await file.exists()) {
+      final content = await file.readAsString();
+      orders = jsonDecode(content);
+    }
+    orders.add(order.toJson());
+
+    await file.writeAsString(jsonEncode(orders));
   }
 
   @override
@@ -267,7 +178,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           _tapCount = 0;
                         }
                       },
-                      child: Image.asset('assets/logo/logo1.png'),
+                      child: Image.asset('assets/img/logo/logo1.png'),
                     )),
                 const Spacer(),
               ],
@@ -591,14 +502,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     IconButton(
                       onPressed: item.quantity > 1
                           ? () {
-                              setState(() {
-                                item.quantity--;
-                              });
+                              setState(
+                                () {
+                                  item.quantity--;
+                                },
+                              );
                             }
                           : () {
-                              setState(() {
-                                cart.remove(item);
-                              });
+                              setState(
+                                () {
+                                  cart.remove(item);
+                                },
+                              );
                             },
                       icon: const Icon(Icons.remove_circle),
                     ),
@@ -606,9 +521,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     IconButton(
                       onPressed: item.quantity > 0 //max 로 변경 필요
                           ? () {
-                              setState(() {
-                                item.quantity++;
-                              });
+                              setState(
+                                () {
+                                  item.quantity++;
+                                },
+                              );
                             }
                           : null,
                       icon: const Icon(Icons.add_circle),
@@ -645,7 +562,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               ),
               const SizedBox(height: 8),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  setState(() {
+                    checkout();
+                    print("완료됨");
+                  });
+                },
                 child: const Text('결제하기'),
               ),
               const SizedBox(height: 40),
@@ -691,7 +613,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   color: selected ? Colors.white : Colors.black87,
                   fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -824,7 +746,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                             onPressed: () {
                                               setState(
                                                 () {
-                                                  cart.add(CartItem(
+                                                  cart.add(OrderItem(
                                                       product: product,
                                                       quantity: quantity));
                                                 },

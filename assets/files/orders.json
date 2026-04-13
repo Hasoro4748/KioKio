@@ -1,0 +1,17 @@
+[
+  {
+    "id": "1",
+    "createdAt": "2026-04-14T12:00:00",
+    "items": [
+      { "productId": "1", "quantity": 2 }
+    ]
+  },
+  {
+    "id": "2",
+    "createdAt": "2026-04-14T12:10:00",
+    "items": [
+      { "productId": "2", "quantity": 1 },
+      { "productId": "5", "quantity": 3 }
+    ]
+  }
+]

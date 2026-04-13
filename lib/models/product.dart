@@ -19,6 +19,18 @@ class Product {
     this.isAvailable = true,
   });
 
+  factory Product.fromJson(Map<String, dynamic> json) {
+    return Product(
+      id: json['id'],
+      name: json['name'],
+      pTheme: json['pTheme'],
+      pType: json['pType'],
+      price: json['price'],
+      imagePath: json['imagePath'],
+      isAvailable: json['isAvailable'] ?? true,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -28,35 +40,4 @@ class Product {
         'imagePath': imagePath,
         'isAvailable': isAvailable,
       };
-
-  factory Product.fromJson(Map<String, dynamic> json) => Product(
-        id: json['id'],
-        name: json['name'],
-        pTheme: json['pTheme'],
-        pType: json['pType'],
-        price: json['price'],
-        imagePath: json['imagePath'],
-        isAvailable: json['isAvailable'] ?? true,
-      );
-}
-
-class OrderItem {
-  final Product product;
-  final int quantity;
-
-  OrderItem({required this.product, required this.quantity});
-
-  int get totalPrice => product.price * quantity;
-}
-
-class CartItem {
-  final Product product;
-  int quantity;
-
-  CartItem({
-    required this.product,
-    this.quantity = 1,
-  });
-
-  int get totalPrice => product.price * quantity;
 }
