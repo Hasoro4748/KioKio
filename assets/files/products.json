@@ -1,162 +1,218 @@
 [
   {
     "id": "1",
-    "name": "상품1",
-    "pTheme": "장르2",
-    "pType": "종류3",
-    "price": 17000,
-    "imagePath": "assets/img/products/num4.png"
+    "name": "메이릴 코스터",
+    "category1": "가디언테일즈",
+    "category2": "내일이걱정",
+    "category3": "코스터",
+    "basePrice": 17000,
+    "images": ["assets/img/products/num1.png"],
+    "options": [
+      {
+        "name": "사이즈",
+        "items": [
+          {"name": "기본", "price": 0},
+          {"name": "라지", "price": 500}
+        ]
+      },{
+        "name": "프리미엄",
+        "items": [
+          {"name": "미디움", "price": 0},
+          {"name": "레어", "price": 2500}
+        ]
+      }
+    ],
+    "isAvailable": true
   },
   {
     "id": "2",
-    "name": "상품212312312312313121231231231231231231312123123",
-    "pTheme": "장르7",
-    "pType": "종류1",
-    "price": 3000,
-    "imagePath": "assets/img/products/num2.png"
+    "name": "나리 코스터",
+    "category1": "가디언테일즈",
+    "category2": "내일이걱정",
+    "category3": "코스터",
+    "basePrice": 3000,
+    "images": ["assets/img/products/num2.png"],
+    "options": [
+      {
+        "name": "사이즈",
+        "items": [
+          {"name": "기본", "price": 0},
+          {"name": "라지", "price": 500}
+        ]
+      }
+    ],
+    "isAvailable": true
   },
   {
     "id": "3",
-    "name": "상품3",
-    "pTheme": "장르1",
-    "pType": "종류2",
-    "price": 26000,
-    "imagePath": "assets/img/products/num6.png"
+    "name": "공주님 뱃지",
+    "category1": "가디언테일즈",
+    "category2": "내일이걱정",
+    "category3": "뱃지",
+    "basePrice": 26000,
+    "images": ["assets/img/products/num3.png"],
+    "options": [
+
+    ],
+    "isAvailable": true
   },
   {
     "id": "4",
-    "name": "상품4",
-    "pTheme": "장르5",
-    "pType": "종류3",
-    "price": 8000,
-    "imagePath": "assets/img/products/num1.png"
+    "name": "어린이 버터 키링",
+    "category1": "트릭컬",
+    "category2": "POTA",
+    "category3": "아크릴 키링",
+    "basePrice": 8000,
+    "images": ["assets/img/products/num4.png"],
+    "options": [
+      {
+        "name": "사이즈",
+        "items": [
+          {"name": "스몰", "price": 0},
+          {"name": "라지", "price": 1500}
+        ]
+      }
+    ],
+    "isAvailable": true
   },
   {
     "id": "5",
-    "name": "상품5",
-    "pTheme": "장르3",
-    "pType": "종류1",
-    "price": 21000,
-    "imagePath": "assets/img/products/num7.png"
+    "name": "에르핀 빵 스탠드",
+    "category1": "트릭컬",
+    "category2": "POTA",
+    "category3": "아크릴 스탠드",
+    "basePrice": 21000,
+    "images": ["assets/img/products/num5.png"],
+    "options": [
+      {
+        "name": "옵션",
+        "items": [
+          {"name": "기본", "price": 0},
+          {"name": "프리미엄", "price": 3000}
+        ]
+      }
+    ],
+    "isAvailable": true
   },
   {
     "id": "6",
-    "name": "상품6",
-    "pTheme": "장르8",
-    "pType": "종류2",
-    "price": 14000,
-    "imagePath": "assets/img/products/num5.png"
+    "name": "코미 사복 키링",
+    "category1": "트릭컬",
+    "category2": "모냐미",
+    "category3": "아크릴 키링",
+    "basePrice": 14000,
+    "images": ["assets/img/products/num6.png"],
+    "options": [
+      {
+        "name": "추가",
+        "items": [
+          {"name": "없음", "price": 0},
+          {"name": "추가", "price": 1000}
+        ]
+      }
+    ],
+    "isAvailable": true
   },
   {
     "id": "7",
-    "name": "상품7",
-    "pTheme": "장르4",
-    "pType": "종류3",
-    "price": 6000,
-    "imagePath": "assets/img/products/num3.png"
+    "name": "미니 벨라 키링",
+    "category1": "트릭컬",
+    "category2": "모냐미",
+    "category3": "아크릴 키링",
+    "basePrice": 6000,
+    "images": ["assets/img/products/num7.png"],
+    "options": [
+      {
+        "name": "사이즈",
+        "items": [
+          {"name": "기본", "price": 0},
+          {"name": "대", "price": 800}
+        ]
+      }
+    ],
+    "isAvailable": true
   },
   {
-    "id": "8",
-    "name": "상품8",
-    "pTheme": "장르6",
-    "pType": "종류1",
-    "price": 29000,
-    "imagePath": "assets/img/products/num4.png"
+  "id": "8",
+    "name": "로레인 뱃지",
+    "category1": "가디언테일즈",
+    "category2": "내일이걱정",
+    "category3": "뱃지",
+    "basePrice": 22000,
+    "images": ["assets/img/products/num8.png"],
+    "options": [
+
+    ],
+    "isAvailable": true
   },
   {
-    "id": "9",
-    "name": "상품9",
-    "pTheme": "장르2",
-    "pType": "종류2",
-    "price": 12000,
-    "imagePath": "assets/img/products/num2.png"
+  "id": "9",
+    "name": "기사 뱃지",
+    "category1": "가디언테일즈",
+    "category2": "내일이걱정",
+    "category3": "뱃지",
+    "basePrice": 11000,
+    "images": ["assets/img/products/num9.png"],
+    "options": [
+
+    ],
+    "isAvailable": true
   },
   {
-    "id": "10",
-    "name": "상품10",
-    "pTheme": "장르7",
-    "pType": "종류3",
-    "price": 5000,
-    "imagePath": "assets/img/products/num6.png"
+  "id": "10",
+  "name": "스피키 코롯토",
+  "category1": "트릭컬",
+  "category2": "POTA",
+  "category3": "코롯토",
+  "basePrice": 26000,
+  "images": ["assets/img/products/num10.png"],
+  "options": [
+    {
+      "name": "사이즈",
+      "items": [
+        {"name": "기본", "price": 0},
+        {"name": "대", "price": 800}
+      ]
+    }
+  ],
+  "isAvailable": true
   },
   {
     "id": "11",
-    "name": "상품11",
-    "pTheme": "장르1",
-    "pType": "종류1",
-    "price": 30000,
-    "imagePath": "assets/img/products/num7.png"
+    "name": "오혈읍루 시춘이",
+    "category1": "림버스",
+    "category2": "POTA",
+    "category3": "아크릴 키링",
+    "basePrice": 6000,
+    "images": ["assets/img/products/num11.png"],
+    "options": [
+      {
+        "name": "사이즈",
+        "items": [
+          {"name": "기본", "price": 0},
+          {"name": "대", "price": 800}
+        ]
+      }
+    ],
+    "isAvailable": true
   },
   {
     "id": "12",
-    "name": "상품12",
-    "pTheme": "장르5",
-    "pType": "종류2",
-    "price": 9000,
-    "imagePath": "assets/img/products/num1.png"
-  },
-  {
-    "id": "13",
-    "name": "상품13",
-    "pTheme": "장르3",
-    "pType": "종류3",
-    "price": 18000,
-    "imagePath": "assets/img/products/num5.png"
-  },
-  {
-    "id": "14",
-    "name": "상품14",
-    "pTheme": "장르8",
-    "pType": "종류1",
-    "price": 24000,
-    "imagePath": "assets/img/products/num3.png"
-  },
-  {
-    "id": "15",
-    "name": "상품15",
-    "pTheme": "장르4",
-    "pType": "종류2",
-    "price": 11000,
-    "imagePath": "assets/img/products/num4.png"
-  },
-  {
-    "id": "16",
-    "name": "상품16",
-    "pTheme": "장르6",
-    "pType": "종류3",
-    "price": 7000,
-    "imagePath": "assets/img/products/num2.png"
-  },
-  {
-    "id": "17",
-    "name": "상품17",
-    "pTheme": "장르2",
-    "pType": "종류1",
-    "price": 20000,
-    "imagePath": "assets/img/products/num6.png"
-  },
-  {
-    "id": "18",
-    "name": "상품18",
-    "pTheme": "장르7",
-    "pType": "종류2",
-    "price": 13000,
-    "imagePath": "assets/img/products/num7.png"
-  },
-  {
-    "id": "19",
-    "name": "상품19",
-    "pTheme": "장르1",
-    "pType": "종류3",
-    "price": 4000,
-    "imagePath": "assets/img/products/num1.png"
-  },
-  {
-    "id": "20",
-    "name": "상품20",
-    "pTheme": "장르5",
-    "pType": "종류1",
-    "price": 27000,
-    "imagePath": "assets/img/products/num5.png"
+    "name": "황금가지 시춘이",
+    "category1": "림버스",
+    "category2": "POTA",
+    "category3": "아크릴 스탠드",
+    "basePrice": 6000,
+    "images": ["assets/img/products/num12.png"],
+    "options": [
+      {
+        "name": "사이즈",
+        "items": [
+          {"name": "기본", "price": 0},
+          {"name": "대", "price": 800}
+        ]
+      }
+    ],
+    "isAvailable": true
   }
 ]

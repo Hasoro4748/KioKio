@@ -1,10 +1,29 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kiosk/screens/counter/counter_page.dart';
 import 'package:kiosk/screens/customer/product_list.dart';
+import 'package:path_provider/path_provider.dart';
 
 class ModelSelectionScreen extends StatelessWidget {
   const ModelSelectionScreen({super.key});
+  Future<void> resetAllData() async {
+    final dir = await getApplicationDocumentsDirectory();
+
+    final productFile = File('${dir.path}/files/products.json');
+    final orderFile = File('${dir.path}/files/orders.json');
+
+    if (await productFile.exists()) {
+      await productFile.delete();
+    }
+
+    if (await orderFile.exists()) {
+      await orderFile.delete();
+    }
+
+    print('데이터 초기화 완료');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +66,13 @@ class ModelSelectionScreen extends StatelessWidget {
                 () {
               Navigator.pushReplacement(context,
                   MaterialPageRoute(builder: (_) => CustomerHomeScreen()));
-            })
+            }),
+            ElevatedButton(
+              onPressed: () async {
+                await resetAllData();
+              },
+              child: Text('초기화'),
+            )
           ],
         )),
       ),
