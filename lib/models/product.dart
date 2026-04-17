@@ -4,27 +4,32 @@ class Product {
   final String id; //  id
   final String name; //  이름
 
-  final String category1; // 대분류
-  final String category2; //  중분류
-  final String category3; //  종류
+  final List<String> categoryGroup1;
+  final List<String> categoryGroup2;
+  final List<String> categoryGroup3;
 
-  final int basePrice; //  가격
-
-  final List<String> images; //  이미지 경로
-
+  final int basePrice;
+  final List<String> images;
   final List<ProductOption> options;
 
-  final bool isAvailable; //  매진 여부
+  final String description;
+
+  final int stock;
+  final bool isAvailable;
+
+  bool get canOrder => isAvailable && stock > 0;
 
   Product({
     required this.id,
     required this.name,
-    required this.category1,
-    required this.category2,
-    required this.category3,
+    required this.categoryGroup1,
+    required this.categoryGroup2,
+    required this.categoryGroup3,
     required this.basePrice,
+    required this.description,
     required this.images,
     required this.options,
+    required this.stock,
     this.isAvailable = true,
   });
 
@@ -32,14 +37,16 @@ class Product {
     return Product(
       id: json['id'],
       name: json['name'],
-      category1: json['category1'],
-      category2: json['category2'],
-      category3: json['category3'],
+      categoryGroup1: List<String>.from(json['categoryGroup1'] ?? []),
+      categoryGroup2: List<String>.from(json['categoryGroup2'] ?? []),
+      categoryGroup3: List<String>.from(json['categoryGroup3'] ?? []),
       basePrice: json['basePrice'],
+      description: json['description'] ?? '',
       images: List<String>.from(json['images'] ?? []),
       options: (json['options'] as List? ?? [])
           .map((e) => ProductOption.fromJson(e))
           .toList(),
+      stock: json['stock'] ?? 999, // 없을시 999 (디버깅 용
       isAvailable: json['isAvailable'] ?? true,
     );
   }
@@ -47,12 +54,14 @@ class Product {
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
-        'category1': category1,
-        'category2': category2,
-        'category3': category3,
+        'categoryGroup1': categoryGroup1,
+        'categoryGroup2': categoryGroup2,
+        'categoryGroup3': categoryGroup3,
         'basePrice': basePrice,
+        'description': description,
         'images': images,
         'options': options.map((e) => e.toJson()).toList(),
+        'stock': stock,
         'isAvailable': isAvailable,
       };
 }

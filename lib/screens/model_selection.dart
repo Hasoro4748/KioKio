@@ -38,43 +38,67 @@ class ModelSelectionScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-            child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.touch_app, size: 120, color: Colors.white),
-            SizedBox(height: 32),
-            const Text(
-              '키오스크 앱',
-              style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
-            ),
-            SizedBox(height: 64),
-            _buildModeButton(
-              context,
-              '카운터 모드',
-              Icons.store,
-              Colors.blue,
-              () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => CounterHomeScreen()),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.touch_app, size: 120, color: Colors.white),
+                  SizedBox(height: 32),
+                  const Text(
+                    'Kio Kio',
+                    style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
+                  ),
+                  Text('키오스크앱',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
+                  SizedBox(height: 32),
+                  _buildModeButton(
+                    context,
+                    '카운터 모드',
+                    Icons.store,
+                    Colors.blue,
+                    () => Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => CounterHomeScreen()),
+                    ),
+                  ),
+                  SizedBox(height: 24),
+                  _buildModeButton(
+                      context, '키오스크 모드', Icons.person, Colors.green, () {
+                    Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => CustomerHomeScreen()));
+                  }),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await resetAllData();
+                    },
+                    child: Text('초기화'),
+                  )
+                ],
               ),
-            ),
-            SizedBox(height: 24),
-            _buildModeButton(context, '키오스크 모드', Icons.person, Colors.green,
-                () {
-              Navigator.pushReplacement(context,
-                  MaterialPageRoute(builder: (_) => CustomerHomeScreen()));
-            }),
-            ElevatedButton(
-              onPressed: () async {
-                await resetAllData();
-              },
-              child: Text('초기화'),
-            )
-          ],
-        )),
+              Positioned(
+                bottom: 16,
+                left: 16,
+                child: Text(
+                  "개발자 : 하소로",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

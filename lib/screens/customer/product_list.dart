@@ -23,6 +23,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   List<Product> products = []; //  상품 리스트
   List<OrderItem> cart = []; //  장바구니 목록
 
+  String? selectedCate1;
   String? selectedCate2; // 장르
   String? selectedCate3; // 종류
   int _tapCount = 0;
@@ -59,38 +60,36 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     });
   }
 
+  List<String> get category1 {
+    final set = products.expand((e) => e.categoryGroup1).toSet().toList();
+    set.sort();
+    return set;
+  }
+
   List<String> get category2 {
-    final set = products.map((e) => e.category2).toSet().toList();
+    final set = products.expand((e) => e.categoryGroup2).toSet().toList();
     set.sort();
     return set;
   }
 
   List<String> get category3 {
-    final set = products.map((e) => e.category3).toSet().toList();
+    final set = products.expand((e) => e.categoryGroup3).toSet().toList();
     set.sort();
     return set;
   }
 
   List<Product> get filteredProducts {
     return products.where((p) {
-      final Cate2Ok = (selectedCate2 == null) || p.category2 == selectedCate2;
-      final Cate3Ok = (selectedCate3 == null) || p.category3 == selectedCate3;
-      return Cate2Ok && Cate3Ok;
-    }).toList();
-  }
+      final cate1Ok =
+          (selectedCate1 == null) || p.categoryGroup1.contains(selectedCate1);
+      final cate2Ok =
+          (selectedCate2 == null) || p.categoryGroup2.contains(selectedCate2);
 
-  void _addToCart(Product product, List<SelectedOption> selectedOptions) {
-    setState(() {
-      cart.add(OrderItem(
-          productId: product.id,
-          basePrice: product.basePrice,
-          name: product.name,
-          selectedOptions: selectedOptions,
-          quantity: 1));
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${product.name} 상품을 장바구니에 담았습니다.')),
-    );
+      final cate3Ok =
+          (selectedCate3 == null) || p.categoryGroup3.contains(selectedCate3);
+
+      return cate2Ok && cate3Ok;
+    }).toList();
   }
 
   void _goHome() {
@@ -321,10 +320,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
+  // 상품 목록
   Widget _buildProductCard(Product product) {
     return GestureDetector(
-      onTap:
-          product.isAvailable ? () => _showProductDetailDialog(product) : null,
+      onTap: product.canOrder ? () => _showProductDetailDialog(product) : null,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
@@ -334,15 +333,31 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         child: Column(
           children: [
             Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                  image: DecorationImage(
-                    image: AssetImage(product.images[0]),
-                    fit: BoxFit.cover,
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(16)),
+                      image: DecorationImage(
+                        image: AssetImage(product.images[0]),
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
-                ),
+                  if (!product.canOrder)
+                    Positioned(
+                      child: Container(
+                          width: double.infinity,
+                          child: Opacity(
+                            opacity: 0.75,
+                            child: Image.asset(
+                              "assets/img/unit/soldOut.png",
+                            ),
+                          )),
+                    )
+                ],
               ),
             ),
             Padding(
@@ -351,13 +366,25 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 children: [
                   Text(
                     product.name,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: product.canOrder
+                        ? const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)
+                        : const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                            decoration: TextDecoration.lineThrough),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text('${TextUtil.money(product.basePrice)}원',
-                      style: TextStyle(fontSize: 16, color: Colors.orange)),
+                      style: product.canOrder
+                          ? TextStyle(fontSize: 16, color: Colors.orange)
+                          : const TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                              decoration: TextDecoration.lineThrough)),
                 ],
               ),
             ),
@@ -595,12 +622,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                       Border.all(width: 1, color: Colors.grey)),
                               width: 500,
                               height: 500,
-                              child: ClipRRect(
-                                child: Image.asset(
-                                  product.images[0],
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
+                              child:
+                                  _ProductImagesSlider(images: product.images),
                             ),
                           ),
                           Expanded(
@@ -641,57 +664,73 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                               color: Colors.orange,
                                             ),
                                           ),
+                                          Text('재고: ${product.stock}'),
                                           const SizedBox(height: 12),
-                                          Text('장르 : ${product.category2}'),
-                                          Text('종류 : ${product.category3}'),
+                                          if (product.description != "")
+                                            Text(
+                                              product.description,
+                                            ),
+                                          if (product.description != "")
+                                            const SizedBox(height: 12),
+                                          Text(
+                                            '장르 : ${product.categoryGroup1}',
+                                            style: TextStyle(fontSize: 10),
+                                          ),
+                                          Text(
+                                            '장르 : ${product.categoryGroup2}',
+                                            style: TextStyle(fontSize: 10),
+                                          ),
+                                          Text(
+                                            '종류 : ${product.categoryGroup3}',
+                                            style: TextStyle(fontSize: 10),
+                                          ),
                                           const SizedBox(height: 20),
                                           Column(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children:
                                                 product.options.map((option) {
-                                              return Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    option.name,
-                                                    style: const TextStyle(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                                              return Padding(
+                                                padding: const EdgeInsets.only(
+                                                    bottom: 16),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      option.name,
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
                                                     ),
-                                                  ),
-                                                  const SizedBox(height: 8),
-                                                  Column(
-                                                    children: option.items
-                                                        .map((item) {
-                                                      final isSelected =
+                                                    const SizedBox(height: 8),
+
+                                                    /// 🔥 Dropdown으로 변경
+                                                    DropdownButtonFormField<
+                                                        OptionItem>(
+                                                      value: selectedOptions[
+                                                          option.name],
+                                                      items: option.items
+                                                          .map((item) {
+                                                        return DropdownMenuItem<
+                                                            OptionItem>(
+                                                          value: item,
+                                                          child: Text(
+                                                            '${item.name} (+${TextUtil.money(item.price)}원)',
+                                                          ),
+                                                        );
+                                                      }).toList(),
+                                                      onChanged: (value) {
+                                                        setStateDialog(() {
                                                           selectedOptions[option
-                                                                      .name]
-                                                                  ?.name ==
-                                                              item.name;
-                                                      return RadioListTile<
-                                                          String>(
-                                                        value: item.name,
-                                                        groupValue:
-                                                            selectedOptions[
-                                                                    option.name]
-                                                                ?.name,
-                                                        onChanged: (value) {
-                                                          setStateDialog(() {
-                                                            selectedOptions[
-                                                                    option
-                                                                        .name] =
-                                                                item;
-                                                          });
-                                                        },
-                                                        title: Text(
-                                                            '${item.name} (+${TextUtil.money(item.price)}원'),
-                                                      );
-                                                    }).toList(),
-                                                  )
-                                                ],
+                                                              .name] = value!;
+                                                        });
+                                                      },
+                                                    )
+                                                  ],
+                                                ),
                                               );
                                             }).toList(),
                                           ),
@@ -702,7 +741,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                          const SizedBox(height: 8),
                                           Row(
                                             children: [
                                               IconButton(
@@ -723,7 +761,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                               ),
                                               IconButton(
                                                 onPressed:
-                                                    quantity > 0 //max 로 변경 필요
+                                                    quantity < product.stock
                                                         ? () {
                                                             setStateDialog(() {
                                                               quantity++;
@@ -741,7 +779,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                   ),
                                 ),
                                 Padding(
-                                  padding: const EdgeInsets.all(16.0),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
                                   child: SizedBox(
                                     width: double.infinity,
                                     height: 56,
@@ -775,9 +816,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                           ),
                                         ));
                                       },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.orange.shade100,
+                                      ),
                                       child: const Text('장바구니 담기'),
                                     ),
                                   ),
+                                ),
+                                SizedBox(
+                                  height: 15,
                                 )
                               ],
                             ),
@@ -796,6 +843,105 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   void _goToCart(BuildContext context) {
     Navigator.push(
         context, MaterialPageRoute(builder: (_) => CartScreen(cart: cart)));
+  }
+}
+
+class _ProductImagesSlider extends StatefulWidget {
+  final List<String> images;
+
+  const _ProductImagesSlider({required this.images});
+
+  @override
+  State<_ProductImagesSlider> createState() => _ProductImagesSliderState();
+}
+
+class _ProductImagesSliderState extends State<_ProductImagesSlider> {
+  final PageController _controller = PageController();
+  int currentIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        PageView.builder(
+          controller: _controller,
+          itemCount: widget.images.length,
+          onPageChanged: (index) {
+            setState(() {
+              currentIndex = index;
+            });
+          },
+          itemBuilder: (context, index) {
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                widget.images[index],
+                fit: BoxFit.contain,
+              ),
+            );
+          },
+        ),
+        if (currentIndex > 0)
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: IconButton(
+              icon: const Icon(
+                Icons.arrow_circle_left_outlined,
+                color: Colors.black,
+              ),
+              onPressed: () {
+                if (currentIndex > 0) {
+                  _controller.previousPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.ease,
+                  );
+                }
+              },
+            ),
+          ),
+        if (currentIndex < widget.images.length - 1)
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            child: IconButton(
+              icon: const Icon(
+                Icons.arrow_circle_right_outlined,
+                color: Colors.black,
+              ),
+              onPressed: () {
+                if (currentIndex < widget.images.length - 1) {
+                  _controller.nextPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.ease,
+                  );
+                }
+              },
+            ),
+          ),
+        Positioned(
+          bottom: 10,
+          left: 0,
+          right: 0,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(widget.images.length, (index) {
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: currentIndex == index ? 10 : 6,
+                height: currentIndex == index ? 10 : 6,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: currentIndex == index ? Colors.white : Colors.grey,
+                ),
+              );
+            }),
+          ),
+        )
+      ],
+    );
   }
 }
 

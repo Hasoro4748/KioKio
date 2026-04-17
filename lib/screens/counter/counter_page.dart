@@ -379,7 +379,7 @@ class _CounterHomeScreenState extends State<CounterHomeScreen> {
                               children: [
                                 /// 상품명
                                 Expanded(
-                                  flex: 3,
+                                  flex: 2,
                                   child: Text(
                                     item.name,
                                     style: const TextStyle(fontSize: 16),

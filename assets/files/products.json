@@ -2,11 +2,12 @@
   {
     "id": "1",
     "name": "메이릴 코스터",
-    "category1": "가디언테일즈",
-    "category2": "내일이걱정",
-    "category3": "코스터",
+    "categoryGroup1": ["가디언테일즈"],
+    "categoryGroup2": ["내일이걱정"],
+    "categoryGroup3": ["코스터"],
     "basePrice": 17000,
-    "images": ["assets/img/products/num1.png"],
+    "images": ["assets/img/products/num1.png","assets/img/products/num2.png"],
+    "description" : "가디언테일즈의 메이릴과 나리를 주제로한 컵받침, 코스터 입니다!",
     "options": [
       {
         "name": "사이즈",
@@ -14,7 +15,8 @@
           {"name": "기본", "price": 0},
           {"name": "라지", "price": 500}
         ]
-      },{
+      },
+      {
         "name": "프리미엄",
         "items": [
           {"name": "미디움", "price": 0},
@@ -22,14 +24,15 @@
         ]
       }
     ],
+    "stock": 5,
     "isAvailable": true
   },
   {
     "id": "2",
     "name": "나리 코스터",
-    "category1": "가디언테일즈",
-    "category2": "내일이걱정",
-    "category3": "코스터",
+    "categoryGroup1": ["가디언테일즈"],
+    "categoryGroup2": ["내일이걱정"],
+    "categoryGroup3": ["코스터"],
     "basePrice": 3000,
     "images": ["assets/img/products/num2.png"],
     "options": [
@@ -41,27 +44,27 @@
         ]
       }
     ],
+    "stock": 5,
     "isAvailable": true
   },
   {
     "id": "3",
     "name": "공주님 뱃지",
-    "category1": "가디언테일즈",
-    "category2": "내일이걱정",
-    "category3": "뱃지",
+    "categoryGroup1": ["가디언테일즈"],
+    "categoryGroup2": ["내일이걱정"],
+    "categoryGroup3": ["뱃지"],
     "basePrice": 26000,
     "images": ["assets/img/products/num3.png"],
-    "options": [
-
-    ],
-    "isAvailable": true
+    "options": [],
+    "stock": 0,
+    "isAvailable": false
   },
   {
     "id": "4",
     "name": "어린이 버터 키링",
-    "category1": "트릭컬",
-    "category2": "POTA",
-    "category3": "아크릴 키링",
+    "categoryGroup1": ["트릭컬"],
+    "categoryGroup2": ["POTA"],
+    "categoryGroup3": ["아크릴 키링"],
     "basePrice": 8000,
     "images": ["assets/img/products/num4.png"],
     "options": [
@@ -73,14 +76,15 @@
         ]
       }
     ],
+    "stock": 5,
     "isAvailable": true
   },
   {
     "id": "5",
     "name": "에르핀 빵 스탠드",
-    "category1": "트릭컬",
-    "category2": "POTA",
-    "category3": "아크릴 스탠드",
+    "categoryGroup1": ["트릭컬"],
+    "categoryGroup2": ["POTA"],
+    "categoryGroup3": ["아크릴 스탠드"],
     "basePrice": 21000,
     "images": ["assets/img/products/num5.png"],
     "options": [
@@ -92,14 +96,15 @@
         ]
       }
     ],
+    "stock": 5,
     "isAvailable": true
   },
   {
     "id": "6",
     "name": "코미 사복 키링",
-    "category1": "트릭컬",
-    "category2": "모냐미",
-    "category3": "아크릴 키링",
+    "categoryGroup1": ["트릭컬"],
+    "categoryGroup2": ["모냐미"],
+    "categoryGroup3": ["아크릴 키링"],
     "basePrice": 14000,
     "images": ["assets/img/products/num6.png"],
     "options": [
@@ -111,14 +116,15 @@
         ]
       }
     ],
+    "stock": 5,
     "isAvailable": true
   },
   {
     "id": "7",
     "name": "미니 벨라 키링",
-    "category1": "트릭컬",
-    "category2": "모냐미",
-    "category3": "아크릴 키링",
+    "categoryGroup1": ["트릭컬"],
+    "categoryGroup2": ["모냐미"],
+    "categoryGroup3": ["아크릴 키링"],
     "basePrice": 6000,
     "images": ["assets/img/products/num7.png"],
     "options": [
@@ -130,59 +136,59 @@
         ]
       }
     ],
+    "stock": 5,
     "isAvailable": true
   },
   {
-  "id": "8",
+    "id": "8",
     "name": "로레인 뱃지",
-    "category1": "가디언테일즈",
-    "category2": "내일이걱정",
-    "category3": "뱃지",
+    "categoryGroup1": ["가디언테일즈"],
+    "categoryGroup2": ["내일이걱정"],
+    "categoryGroup3": ["뱃지"],
     "basePrice": 22000,
     "images": ["assets/img/products/num8.png"],
-    "options": [
-
-    ],
+    "options": [],
+    "stock": 5,
     "isAvailable": true
   },
   {
-  "id": "9",
+    "id": "9",
     "name": "기사 뱃지",
-    "category1": "가디언테일즈",
-    "category2": "내일이걱정",
-    "category3": "뱃지",
+    "categoryGroup1": ["가디언테일즈"],
+    "categoryGroup2": ["내일이걱정"],
+    "categoryGroup3": ["뱃지"],
     "basePrice": 11000,
     "images": ["assets/img/products/num9.png"],
-    "options": [
-
-    ],
+    "options": [],
+    "stock": 5,
     "isAvailable": true
   },
   {
-  "id": "10",
-  "name": "스피키 코롯토",
-  "category1": "트릭컬",
-  "category2": "POTA",
-  "category3": "코롯토",
-  "basePrice": 26000,
-  "images": ["assets/img/products/num10.png"],
-  "options": [
-    {
-      "name": "사이즈",
-      "items": [
-        {"name": "기본", "price": 0},
-        {"name": "대", "price": 800}
-      ]
-    }
-  ],
-  "isAvailable": true
+    "id": "10",
+    "name": "스피키 코롯토",
+    "categoryGroup1": ["트릭컬"],
+    "categoryGroup2": ["POTA"],
+    "categoryGroup3": ["코롯토"],
+    "basePrice": 26000,
+    "images": ["assets/img/products/num10.png"],
+    "options": [
+      {
+        "name": "사이즈",
+        "items": [
+          {"name": "기본", "price": 0},
+          {"name": "대", "price": 800}
+        ]
+      }
+    ],
+    "stock": 5,
+    "isAvailable": true
   },
   {
     "id": "11",
     "name": "오혈읍루 시춘이",
-    "category1": "림버스",
-    "category2": "POTA",
-    "category3": "아크릴 키링",
+    "categoryGroup1": ["림버스"],
+    "categoryGroup2": ["POTA"],
+    "categoryGroup3": ["아크릴 키링"],
     "basePrice": 6000,
     "images": ["assets/img/products/num11.png"],
     "options": [
@@ -194,14 +200,15 @@
         ]
       }
     ],
+    "stock": 5,
     "isAvailable": true
   },
   {
     "id": "12",
     "name": "황금가지 시춘이",
-    "category1": "림버스",
-    "category2": "POTA",
-    "category3": "아크릴 스탠드",
+    "categoryGroup1": ["림버스"],
+    "categoryGroup2": ["POTA"],
+    "categoryGroup3": ["아크릴 스탠드"],
     "basePrice": 6000,
     "images": ["assets/img/products/num12.png"],
     "options": [
@@ -213,6 +220,7 @@
         ]
       }
     ],
+    "stock": 5,
     "isAvailable": true
   }
 ]
