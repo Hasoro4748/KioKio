@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kiosk/screens/counter/counter_page.dart';
 import 'package:kiosk/screens/customer/product_list.dart';
+import 'package:kiosk/theme/common_theme.dart';
 import 'package:path_provider/path_provider.dart';
 
 class ModelSelectionScreen extends StatelessWidget {
@@ -31,11 +32,7 @@ class ModelSelectionScreen extends StatelessWidget {
       body: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.orange[400]!, Colors.orange[700]!],
-          ),
+          color: PageColors.cateBack,
         ),
         child: SafeArea(
           child: Stack(
@@ -44,16 +41,12 @@ class ModelSelectionScreen extends StatelessWidget {
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.touch_app, size: 120, color: Colors.white),
-                  SizedBox(height: 32),
-                  const Text(
-                    'Kio Kio',
-                    style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+                  Image.asset(
+                    'assets/icon/appIcon2.png',
+                    width: 200,
                   ),
-                  Text('키오스크앱',
+                  const SizedBox(height: 16),
+                  Text('편리하게 이용하는 키오스크 & POS 앱',
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -61,22 +54,21 @@ class ModelSelectionScreen extends StatelessWidget {
                   SizedBox(height: 32),
                   _buildModeButton(
                     context,
-                    '카운터 모드',
+                    'POS 모드',
                     Icons.store,
-                    Colors.blue,
                     () => Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (_) => CounterHomeScreen()),
+                      MaterialPageRoute(builder: (_) => CounterMainScreen()),
                     ),
                   ),
                   SizedBox(height: 24),
-                  _buildModeButton(
-                      context, '키오스크 모드', Icons.person, Colors.green, () {
+                  _buildModeButton(context, '키오스크 모드', Icons.person, () {
                     Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                             builder: (_) => CustomerHomeScreen()));
                   }),
+                  SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () async {
                       await resetAllData();
@@ -103,8 +95,8 @@ class ModelSelectionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildModeButton(BuildContext context, String title, IconData icon,
-      Color color, VoidCallback onTap) {
+  Widget _buildModeButton(
+      BuildContext context, String title, IconData icon, VoidCallback onTap) {
     return Container(
       width: 280,
       height: 80,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kiosk/screens/model_selection.dart';
+import 'package:kiosk/theme/common_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -8,7 +10,11 @@ void main() {
   SystemChrome.setEnabledSystemUIMode(
     SystemUiMode.immersiveSticky, // 👈 핵심
   );
-  runApp(const MyApp());
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -18,13 +24,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Kioder',
-      theme: ThemeData(
-        primarySwatch: Colors.orange,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-        fontFamily: 'GmarketSans',
-      ),
+      theme: mTheme(),
       home: ModelSelectionScreen(),
       debugShowCheckedModeBanner: false,
     );

@@ -1,35 +1,35 @@
-import 'package:flutter/cupertino.dart';
-
 class Product {
-  final String id; //  id
-  final String name; //  이름
+  final String id;
+  final String name;
 
-  final List<String> categoryGroup1;
-  final List<String> categoryGroup2;
-  final List<String> categoryGroup3;
+  final List<String> theme;
+  final List<String> seller;
+  final List<String> categoryGroup;
 
   final int basePrice;
   final List<String> images;
-  final List<ProductOption> options;
-
   final String description;
 
   final int stock;
   final bool isAvailable;
+
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   bool get canOrder => isAvailable && stock > 0;
 
   Product({
     required this.id,
     required this.name,
-    required this.categoryGroup1,
-    required this.categoryGroup2,
-    required this.categoryGroup3,
+    required this.theme,
+    required this.categoryGroup,
+    required this.seller,
     required this.basePrice,
     required this.description,
     required this.images,
-    required this.options,
     required this.stock,
+    required this.createdAt,
+    required this.updatedAt,
     this.isAvailable = true,
   });
 
@@ -37,76 +37,61 @@ class Product {
     return Product(
       id: json['id'],
       name: json['name'],
-      categoryGroup1: List<String>.from(json['categoryGroup1'] ?? []),
-      categoryGroup2: List<String>.from(json['categoryGroup2'] ?? []),
-      categoryGroup3: List<String>.from(json['categoryGroup3'] ?? []),
+      theme: List<String>.from(json['theme'] ?? []),
+      categoryGroup: List<String>.from(json['categoryGroup'] ?? []),
+      seller: List<String>.from(json['seller'] ?? []),
       basePrice: json['basePrice'],
       description: json['description'] ?? '',
       images: List<String>.from(json['images'] ?? []),
-      options: (json['options'] as List? ?? [])
-          .map((e) => ProductOption.fromJson(e))
-          .toList(),
-      stock: json['stock'] ?? 999, // 없을시 999 (디버깅 용
+      stock: json['stock'] ?? 999,
       isAvailable: json['isAvailable'] ?? true,
+      createdAt: DateTime.parse(json['createdAt']),
+      updatedAt: DateTime.parse(json['updatedAt']),
     );
   }
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
-        'categoryGroup1': categoryGroup1,
-        'categoryGroup2': categoryGroup2,
-        'categoryGroup3': categoryGroup3,
+        'theme': theme,
+        'categoryGroup': categoryGroup,
+        'seller': seller,
         'basePrice': basePrice,
         'description': description,
         'images': images,
-        'options': options.map((e) => e.toJson()).toList(),
         'stock': stock,
         'isAvailable': isAvailable,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
       };
-}
 
-class ProductOption {
-  final String name;
-  final List<OptionItem> items;
-
-  ProductOption({
-    required this.name,
-    required this.items,
-  });
-
-  factory ProductOption.fromJson(Map<String, dynamic> json) {
-    return ProductOption(
-      name: json['name'],
-      items: (json['items'] as List? ?? [])
-          .map((e) => OptionItem.fromJson(e))
-          .toList(),
+  Product copyWith({
+    String? id,
+    String? name,
+    List<String>? theme,
+    List<String>? categoryGroup,
+    List<String>? seller,
+    int? basePrice,
+    String? description,
+    List<String>? images,
+    int? stock,
+    bool? isAvailable,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Product(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      theme: theme ?? this.theme,
+      categoryGroup: categoryGroup ?? this.categoryGroup,
+      seller: seller ?? this.seller,
+      basePrice: basePrice ?? this.basePrice,
+      description: description ?? this.description,
+      images: images ?? this.images,
+      stock: stock ?? this.stock,
+      isAvailable: isAvailable ?? this.isAvailable,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
-  Map<String, dynamic> toJson() => {
-        'name': name,
-        'items': items.map((e) => e.toJson()).toList(),
-      };
-}
-
-class OptionItem {
-  final String name;
-  final int price;
-
-  OptionItem({
-    required this.name,
-    required this.price,
-  });
-
-  factory OptionItem.fromJson(Map<String, dynamic> json) {
-    return OptionItem(
-      name: json['name'],
-      price: json['price'],
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        'name': name,
-        'price': price,
-      };
 }
