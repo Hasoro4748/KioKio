@@ -28,6 +28,9 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  drift: ^2.17.0
+  sqlite3_flutter_libs: ^0.5.20
+  path: ^1.9.0
 
   collection:
   flutter:
@@ -46,6 +49,8 @@ dependency_overrides:
 
 
 dev_dependencies:
+  drift_dev: ^2.17.0
+  build_runner: ^2.4.9
   flutter_launcher_icons: ^0.14.3
   flutter_test:
     sdk: flutter
@@ -80,7 +85,7 @@ flutter:
     - assets/img/products/
     - assets/img/logo/
     - assets/img/unit/
-    - assets/files/products.json
+    - assets/json/products_seed.json
     - assets/icon/
   # To add assets to your application, add an assets section, like this:
   # assets:

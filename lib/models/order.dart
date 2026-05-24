@@ -42,7 +42,7 @@ class Order {
 }
 
 class OrderItem {
-  final String productId;
+  final int productId;
   final String name;
   final int basePrice;
   int quantity;

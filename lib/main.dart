@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kiosk/db/app_database.dart';
 import 'package:kiosk/screens/model_selection.dart';
 import 'package:kiosk/theme/common_theme.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   SystemChrome.setEnabledSystemUIMode(
     SystemUiMode.immersiveSticky, // 👈 핵심
   );
+
+  final db = AppDatabase();
+  await db.seedProducts();
+
   runApp(
     const ProviderScope(
       child: MyApp(),

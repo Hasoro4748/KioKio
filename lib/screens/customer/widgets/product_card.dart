@@ -1,10 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:kiosk/models/product.dart';
+import 'package:kiosk/db/app_database.dart';
+import 'package:kiosk/models/product_model.dart';
 import 'package:kiosk/utils/text_util.dart';
 
 class ProductCard extends StatelessWidget {
-  final Product product;
+  final ProductModel product;
   final VoidCallback? onTap;
 
   const ProductCard({
@@ -12,6 +13,9 @@ class ProductCard extends StatelessWidget {
     required this.product,
     required this.onTap,
   });
+  bool canOrder(ProductModel product) {
+    return product.isAvailable && product.stock > 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,12 +38,12 @@ class ProductCard extends StatelessWidget {
                       borderRadius:
                           const BorderRadius.vertical(top: Radius.circular(16)),
                       image: DecorationImage(
-                        image: AssetImage(product.images[0]),
+                        image: AssetImage(product.thumbnail),
                         fit: BoxFit.contain,
                       ),
                     ),
                   ),
-                  if (!product.canOrder)
+                  if (!canOrder(product))
                     Positioned.fill(
                       child: Opacity(
                         opacity: 0.75,
@@ -55,7 +59,7 @@ class ProductCard extends StatelessWidget {
                 children: [
                   Text(
                     product.name,
-                    style: product.canOrder
+                    style: canOrder(product)
                         ? const TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold)
                         : const TextStyle(
@@ -69,7 +73,7 @@ class ProductCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '${TextUtil.money(product.basePrice)}원',
-                    style: product.canOrder
+                    style: canOrder(product)
                         ? const TextStyle(fontSize: 16, color: Colors.orange)
                         : const TextStyle(
                             fontSize: 16,

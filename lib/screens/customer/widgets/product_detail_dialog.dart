@@ -1,12 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:kiosk/models/product.dart';
+import 'package:kiosk/db/app_database.dart';
+import 'package:kiosk/models/product_model.dart';
+
 import 'package:kiosk/screens/customer/widgets/product_image_slider.dart';
 import 'package:kiosk/theme/common_theme.dart';
 import 'package:kiosk/utils/responsive.dart';
 import 'package:kiosk/utils/text_util.dart';
 
 class ProductDetailDialog extends StatefulWidget {
-  final Product product;
+  final ProductModel product;
   final Function(int quantity) onAddCart;
 
   const ProductDetailDialog({
@@ -21,6 +25,10 @@ class ProductDetailDialog extends StatefulWidget {
 
 class _ProductDetailDialogState extends State<ProductDetailDialog> {
   int quantity = 1;
+
+  List<String> parseImages(String raw) {
+    return List<String>.from(jsonDecode(raw));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +77,7 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
   Widget _buildDesktopLayout(
     BuildContext context,
     Responsive rs,
-    Product product,
+    ProductModel product,
   ) {
     return Row(
       children: [
@@ -117,7 +125,7 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
   Widget _buildMobileLayout(
     BuildContext context,
     Responsive rs,
-    Product product,
+    ProductModel product,
   ) {
     return Column(
       children: [
@@ -162,7 +170,7 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
   Widget _buildInfoSection(
     BuildContext context,
     Responsive rs,
-    Product product,
+    ProductModel product,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,19 +267,19 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
                 _buildInfoText(
                   rs,
                   '장르',
-                  product.theme.join(', '),
+                  product.theme,
                 ),
 
                 _buildInfoText(
                   rs,
                   '종류',
-                  product.categoryGroup.join(', '),
+                  product.categoryGroup,
                 ),
 
                 _buildInfoText(
                   rs,
                   '판매자',
-                  product.seller.join(', '),
+                  product.seller,
                 ),
 
                 SizedBox(

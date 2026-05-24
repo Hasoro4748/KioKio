@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kiosk/db/app_database.dart';
 import 'package:kiosk/models/order.dart';
-import 'package:kiosk/models/product.dart';
+import 'package:kiosk/models/product_model.dart';
 import 'package:kiosk/providers/order_providers.dart';
+import 'package:kiosk/providers/product_providers.dart';
 import 'package:kiosk/screens/customer/widgets/cart_panel.dart';
 import 'package:kiosk/screens/customer/widgets/category_chip.dart';
 import 'package:kiosk/screens/customer/widgets/product_card.dart';
 import 'package:kiosk/screens/customer/widgets/product_detail_dialog.dart';
 import 'package:kiosk/screens/customer/widgets/theme_chip.dart';
 import 'package:kiosk/screens/model_selection.dart';
-import 'package:kiosk/sevices/order_service.dart';
-import 'package:kiosk/sevices/product_service.dart';
 import 'package:kiosk/theme/common_theme.dart';
 import 'package:kiosk/utils/responsive.dart';
 import 'package:kiosk/utils/text_util.dart';
@@ -24,7 +24,6 @@ class CustomerHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
-  List<Product> products = [];
   List<OrderItem> cart = [];
 
   String? selectedTheme;
@@ -37,7 +36,6 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadProducts();
   }
 
   void initTag() {
@@ -46,82 +44,82 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     selectedSeller = null;
   }
 
-  Future<void> _loadProducts() async {
-    final loaded = await ProductService.loadProducts();
+  List<String> getThemes(List<ProductModel> products) {
+    final set = products.map((e) => e.theme).toSet().toList();
 
-    setState(() {
-      products = loaded;
-    });
-  }
-
-  List<String> get theme {
-    final set = products.expand((e) => e.theme).toSet().toList();
     set.sort();
+
     return set;
   }
 
-  List<String> get categoryGroups {
+  List<String> getCategoryGroups(List<ProductModel> products) {
     final filtered = products.where((p) {
-      final themeOk = selectedTheme == null || p.theme.contains(selectedTheme);
+      final themeOk = selectedTheme == null || p.theme == selectedTheme;
 
-      final sellerOk =
-          selectedSeller == null || p.seller.contains(selectedSeller);
+      final sellerOk = selectedSeller == null || p.seller == selectedSeller;
 
       return themeOk && sellerOk;
     });
 
-    final set = filtered.expand((e) => e.categoryGroup).toSet().toList();
+    final set = filtered.map((e) => e.categoryGroup).toSet().toList();
 
     set.sort();
 
     return set;
   }
 
-  List<String> get seller {
-    final set = products.expand((e) => e.seller).toSet().toList();
+  List<String> getSellers(List<ProductModel> products) {
+    final set = products.map((e) => e.seller).toSet().toList();
 
     set.sort();
 
     return set;
   }
 
-  bool isSellerEnabled(String sellerName) {
-    return products.any((p) {
-      final themeOk = selectedTheme == null || p.theme.contains(selectedTheme);
-      final cateOk =
-          selectedCate == null || p.categoryGroup.contains(selectedCate);
-
-      final sellerOk = p.seller.contains(sellerName);
-
-      return themeOk && sellerOk && cateOk;
-    });
-  }
-
-  bool isThemeEnabled(String themeName) {
-    return products.any((p) {
-      final sellerOk =
-          selectedSeller == null || p.seller.contains(selectedSeller);
-
-      final cateOk =
-          selectedCate == null || p.categoryGroup.contains(selectedCate);
-      final themeOk = p.theme.contains(themeName);
-
-      return themeOk && sellerOk && cateOk;
-    });
-  }
-
-  List<Product> get filteredProducts {
+  List<ProductModel> getFilteredProducts(List<ProductModel> products) {
     return products.where((p) {
-      final themeOk = selectedTheme == null || p.theme.contains(selectedTheme);
+      final themeOk = selectedTheme == null || p.theme == selectedTheme;
 
-      final cateOk =
-          selectedCate == null || p.categoryGroup.contains(selectedCate);
+      final cateOk = selectedCate == null || p.categoryGroup == selectedCate;
 
-      final sellerOk =
-          selectedSeller == null || p.seller.contains(selectedSeller);
+      final sellerOk = selectedSeller == null || p.seller == selectedSeller;
 
       return themeOk && cateOk && sellerOk;
     }).toList();
+  }
+
+  bool isSellerEnabled(
+    List<ProductModel> products,
+    String sellerName,
+  ) {
+    return products.any((p) {
+      final themeOk = selectedTheme == null || p.theme == selectedTheme;
+
+      final cateOk = selectedCate == null || p.categoryGroup == selectedCate;
+
+      final sellerOk = p.seller == sellerName;
+
+      return themeOk && sellerOk && cateOk;
+    });
+  }
+
+  bool isThemeEnabled(
+    List<ProductModel> products,
+    String themeName,
+  ) {
+    return products.any((p) {
+      final sellerOk = selectedSeller == null || p.seller == selectedSeller;
+
+      final cateOk = selectedCate == null || p.categoryGroup == selectedCate;
+
+      final themeOk = p.theme == themeName;
+
+      return themeOk && sellerOk && cateOk;
+    });
+  }
+
+  bool canOrder(ProductModel product) {
+    return product.isAvailable && product.stock > 0;
   }
 
   void _goHome() {
@@ -148,7 +146,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     );
   }
 
-  int _getStock(String productId) {
+  int _getStock(List<ProductModel> products, int productId) {
     return products.firstWhere((p) => p.id == productId).stock;
   }
 
@@ -205,7 +203,15 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final rs = Responsive(context);
+    final products = ref.watch(productProvider);
 
+    final themes = getThemes(products);
+
+    final sellers = getSellers(products);
+
+    final categoryGroups = getCategoryGroups(products);
+
+    final filteredProducts = getFilteredProducts(products);
     return Scaffold(
       body: Row(
         children: [
@@ -253,15 +259,15 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
-                        ...theme.map(
+                        ...themes.map(
                           (t) => ThemeChip(
                             label: t,
                             selected: selectedTheme == t,
-                            enabled: isThemeEnabled(t),
+                            enabled: isThemeEnabled(products, t),
                             onTap: () {
                               setState(() {
                                 if (selectedTheme != t) {
-                                  if (!isThemeEnabled(t)) {
+                                  if (!isThemeEnabled(products, t)) {
                                     selectedSeller = null;
                                     selectedCate = null;
                                   }
@@ -315,16 +321,16 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                             },
                           ),
                         ),
-                        ...seller.map(
+                        ...sellers.map(
                           (t) => CategoryChip(
                             fSize: rs.font(20),
                             label: t,
                             selected: selectedSeller == t,
-                            enabled: isSellerEnabled(t),
+                            enabled: isSellerEnabled(products, t),
                             onTap: () {
                               setState(() {
                                 if (selectedSeller != t) {
-                                  if (!isSellerEnabled(t)) {
+                                  if (!isSellerEnabled(products, t)) {
                                     selectedTheme = null;
                                     selectedCate = null;
                                   }
@@ -412,7 +418,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
                                     return ProductCard(
                                       product: product,
-                                      onTap: product.canOrder
+                                      onTap: canOrder(product)
                                           ? () => showDialog(
                                                 context: context,
                                                 builder: (_) =>
@@ -536,7 +542,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
                                     return ProductCard(
                                       product: product,
-                                      onTap: product.canOrder
+                                      onTap: canOrder(product)
                                           ? () => showDialog(
                                                 context: context,
                                                 builder: (_) =>

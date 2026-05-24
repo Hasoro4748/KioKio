@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:kiosk/models/product.dart';
+import 'package:kiosk/db/app_database.dart';
 import 'package:path_provider/path_provider.dart';
 
 class ProductService {
@@ -28,4 +28,6 @@ class ProductService {
 
     return jsonList.map((e) => Product.fromJson(e)).toList();
   }
+
+  static saveProducts(List<Product> state) {}
 }

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:kiosk/db/app_database.dart';
 import 'package:kiosk/screens/counter/counter_page.dart';
 import 'package:kiosk/screens/customer/product_list.dart';
 import 'package:kiosk/theme/common_theme.dart';
@@ -9,19 +10,22 @@ import 'package:path_provider/path_provider.dart';
 
 class ModelSelectionScreen extends StatelessWidget {
   const ModelSelectionScreen({super.key});
+
   Future<void> resetAllData() async {
-    final dir = await getApplicationDocumentsDirectory();
-
-    final productFile = File('${dir.path}/files/products.json');
-    final orderFile = File('${dir.path}/files/orders.json');
-
-    if (await productFile.exists()) {
-      await productFile.delete();
-    }
-
-    if (await orderFile.exists()) {
-      await orderFile.delete();
-    }
+    // final dir = await getApplicationDocumentsDirectory();
+    //
+    // final productFile = File('${dir.path}/files/products.json');
+    // final orderFile = File('${dir.path}/files/orders.json');
+    //
+    // if (await productFile.exists()) {
+    //   await productFile.delete();
+    // }
+    //
+    // if (await orderFile.exists()) {
+    //   await orderFile.delete();
+    // }
+    final db = AppDatabase();
+    db.resetProducts();
 
     print('데이터 초기화 완료');
   }
