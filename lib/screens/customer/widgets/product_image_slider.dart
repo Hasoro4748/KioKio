@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:kiosk/models/product_image_model.dart';
 import 'package:kiosk/utils/responsive.dart';
 
 class ProductImagesSlider extends StatefulWidget {
-  final List<String> images;
+  final List<ProductImageModel> images;
 
   const ProductImagesSlider({
     super.key,
@@ -49,7 +50,7 @@ class _ProductImagesSliderState extends State<ProductImagesSlider> {
                   rs.padding(12),
                 ),
                 child: Image.asset(
-                  widget.images[index],
+                  widget.images[index].imagePath,
                   fit: BoxFit.contain,
                 ),
               ),

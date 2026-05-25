@@ -22,22 +22,6 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
       'name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _themeMeta = const VerificationMeta('theme');
-  @override
-  late final GeneratedColumn<String> theme = GeneratedColumn<String>(
-      'theme', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _sellerMeta = const VerificationMeta('seller');
-  @override
-  late final GeneratedColumn<String> seller = GeneratedColumn<String>(
-      'seller', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _categoryGroupMeta =
-      const VerificationMeta('categoryGroup');
-  @override
-  late final GeneratedColumn<String> categoryGroup = GeneratedColumn<String>(
-      'category_group', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _basePriceMeta =
       const VerificationMeta('basePrice');
   @override
@@ -83,9 +67,6 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
   List<GeneratedColumn> get $columns => [
         id,
         name,
-        theme,
-        seller,
-        categoryGroup,
         basePrice,
         description,
         stock,
@@ -111,26 +92,6 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
           _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
     } else if (isInserting) {
       context.missing(_nameMeta);
-    }
-    if (data.containsKey('theme')) {
-      context.handle(
-          _themeMeta, theme.isAcceptableOrUnknown(data['theme']!, _themeMeta));
-    } else if (isInserting) {
-      context.missing(_themeMeta);
-    }
-    if (data.containsKey('seller')) {
-      context.handle(_sellerMeta,
-          seller.isAcceptableOrUnknown(data['seller']!, _sellerMeta));
-    } else if (isInserting) {
-      context.missing(_sellerMeta);
-    }
-    if (data.containsKey('category_group')) {
-      context.handle(
-          _categoryGroupMeta,
-          categoryGroup.isAcceptableOrUnknown(
-              data['category_group']!, _categoryGroupMeta));
-    } else if (isInserting) {
-      context.missing(_categoryGroupMeta);
     }
     if (data.containsKey('base_price')) {
       context.handle(_basePriceMeta,
@@ -181,12 +142,6 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
-      theme: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}theme'])!,
-      seller: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}seller'])!,
-      categoryGroup: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}category_group'])!,
       basePrice: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}base_price'])!,
       description: attachedDatabase.typeMapping
@@ -213,9 +168,6 @@ class Product extends DataClass implements Insertable<Product> {
   final String name;
 
   /// JSON 문자열 저장
-  final String theme;
-  final String seller;
-  final String categoryGroup;
   final int basePrice;
   final String description;
   final int stock;
@@ -225,9 +177,6 @@ class Product extends DataClass implements Insertable<Product> {
   const Product(
       {required this.id,
       required this.name,
-      required this.theme,
-      required this.seller,
-      required this.categoryGroup,
       required this.basePrice,
       required this.description,
       required this.stock,
@@ -239,9 +188,6 @@ class Product extends DataClass implements Insertable<Product> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
-    map['theme'] = Variable<String>(theme);
-    map['seller'] = Variable<String>(seller);
-    map['category_group'] = Variable<String>(categoryGroup);
     map['base_price'] = Variable<int>(basePrice);
     map['description'] = Variable<String>(description);
     map['stock'] = Variable<int>(stock);
@@ -255,9 +201,6 @@ class Product extends DataClass implements Insertable<Product> {
     return ProductsCompanion(
       id: Value(id),
       name: Value(name),
-      theme: Value(theme),
-      seller: Value(seller),
-      categoryGroup: Value(categoryGroup),
       basePrice: Value(basePrice),
       description: Value(description),
       stock: Value(stock),
@@ -273,9 +216,6 @@ class Product extends DataClass implements Insertable<Product> {
     return Product(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
-      theme: serializer.fromJson<String>(json['theme']),
-      seller: serializer.fromJson<String>(json['seller']),
-      categoryGroup: serializer.fromJson<String>(json['categoryGroup']),
       basePrice: serializer.fromJson<int>(json['basePrice']),
       description: serializer.fromJson<String>(json['description']),
       stock: serializer.fromJson<int>(json['stock']),
@@ -290,9 +230,6 @@ class Product extends DataClass implements Insertable<Product> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
-      'theme': serializer.toJson<String>(theme),
-      'seller': serializer.toJson<String>(seller),
-      'categoryGroup': serializer.toJson<String>(categoryGroup),
       'basePrice': serializer.toJson<int>(basePrice),
       'description': serializer.toJson<String>(description),
       'stock': serializer.toJson<int>(stock),
@@ -305,9 +242,6 @@ class Product extends DataClass implements Insertable<Product> {
   Product copyWith(
           {int? id,
           String? name,
-          String? theme,
-          String? seller,
-          String? categoryGroup,
           int? basePrice,
           String? description,
           int? stock,
@@ -317,9 +251,6 @@ class Product extends DataClass implements Insertable<Product> {
       Product(
         id: id ?? this.id,
         name: name ?? this.name,
-        theme: theme ?? this.theme,
-        seller: seller ?? this.seller,
-        categoryGroup: categoryGroup ?? this.categoryGroup,
         basePrice: basePrice ?? this.basePrice,
         description: description ?? this.description,
         stock: stock ?? this.stock,
@@ -331,11 +262,6 @@ class Product extends DataClass implements Insertable<Product> {
     return Product(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
-      theme: data.theme.present ? data.theme.value : this.theme,
-      seller: data.seller.present ? data.seller.value : this.seller,
-      categoryGroup: data.categoryGroup.present
-          ? data.categoryGroup.value
-          : this.categoryGroup,
       basePrice: data.basePrice.present ? data.basePrice.value : this.basePrice,
       description:
           data.description.present ? data.description.value : this.description,
@@ -352,9 +278,6 @@ class Product extends DataClass implements Insertable<Product> {
     return (StringBuffer('Product(')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('theme: $theme, ')
-          ..write('seller: $seller, ')
-          ..write('categoryGroup: $categoryGroup, ')
           ..write('basePrice: $basePrice, ')
           ..write('description: $description, ')
           ..write('stock: $stock, ')
@@ -366,17 +289,14 @@ class Product extends DataClass implements Insertable<Product> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, theme, seller, categoryGroup,
-      basePrice, description, stock, isAvailable, createdAt, updatedAt);
+  int get hashCode => Object.hash(id, name, basePrice, description, stock,
+      isAvailable, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Product &&
           other.id == this.id &&
           other.name == this.name &&
-          other.theme == this.theme &&
-          other.seller == this.seller &&
-          other.categoryGroup == this.categoryGroup &&
           other.basePrice == this.basePrice &&
           other.description == this.description &&
           other.stock == this.stock &&
@@ -388,9 +308,6 @@ class Product extends DataClass implements Insertable<Product> {
 class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<int> id;
   final Value<String> name;
-  final Value<String> theme;
-  final Value<String> seller;
-  final Value<String> categoryGroup;
   final Value<int> basePrice;
   final Value<String> description;
   final Value<int> stock;
@@ -400,9 +317,6 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   const ProductsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
-    this.theme = const Value.absent(),
-    this.seller = const Value.absent(),
-    this.categoryGroup = const Value.absent(),
     this.basePrice = const Value.absent(),
     this.description = const Value.absent(),
     this.stock = const Value.absent(),
@@ -413,9 +327,6 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   ProductsCompanion.insert({
     this.id = const Value.absent(),
     required String name,
-    required String theme,
-    required String seller,
-    required String categoryGroup,
     required int basePrice,
     required String description,
     this.stock = const Value.absent(),
@@ -423,9 +334,6 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     required DateTime createdAt,
     required DateTime updatedAt,
   })  : name = Value(name),
-        theme = Value(theme),
-        seller = Value(seller),
-        categoryGroup = Value(categoryGroup),
         basePrice = Value(basePrice),
         description = Value(description),
         createdAt = Value(createdAt),
@@ -433,9 +341,6 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   static Insertable<Product> custom({
     Expression<int>? id,
     Expression<String>? name,
-    Expression<String>? theme,
-    Expression<String>? seller,
-    Expression<String>? categoryGroup,
     Expression<int>? basePrice,
     Expression<String>? description,
     Expression<int>? stock,
@@ -446,9 +351,6 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
-      if (theme != null) 'theme': theme,
-      if (seller != null) 'seller': seller,
-      if (categoryGroup != null) 'category_group': categoryGroup,
       if (basePrice != null) 'base_price': basePrice,
       if (description != null) 'description': description,
       if (stock != null) 'stock': stock,
@@ -461,9 +363,6 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   ProductsCompanion copyWith(
       {Value<int>? id,
       Value<String>? name,
-      Value<String>? theme,
-      Value<String>? seller,
-      Value<String>? categoryGroup,
       Value<int>? basePrice,
       Value<String>? description,
       Value<int>? stock,
@@ -473,9 +372,6 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     return ProductsCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
-      theme: theme ?? this.theme,
-      seller: seller ?? this.seller,
-      categoryGroup: categoryGroup ?? this.categoryGroup,
       basePrice: basePrice ?? this.basePrice,
       description: description ?? this.description,
       stock: stock ?? this.stock,
@@ -493,15 +389,6 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
-    }
-    if (theme.present) {
-      map['theme'] = Variable<String>(theme.value);
-    }
-    if (seller.present) {
-      map['seller'] = Variable<String>(seller.value);
-    }
-    if (categoryGroup.present) {
-      map['category_group'] = Variable<String>(categoryGroup.value);
     }
     if (basePrice.present) {
       map['base_price'] = Variable<int>(basePrice.value);
@@ -529,9 +416,6 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     return (StringBuffer('ProductsCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('theme: $theme, ')
-          ..write('seller: $seller, ')
-          ..write('categoryGroup: $categoryGroup, ')
           ..write('basePrice: $basePrice, ')
           ..write('description: $description, ')
           ..write('stock: $stock, ')
@@ -563,7 +447,10 @@ class $ProductImagesTable extends ProductImages
   @override
   late final GeneratedColumn<int> productId = GeneratedColumn<int>(
       'product_id', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES products (id) ON DELETE CASCADE'));
   static const VerificationMeta _imagePathMeta =
       const VerificationMeta('imagePath');
   @override
@@ -883,24 +770,1335 @@ class ProductImagesCompanion extends UpdateCompanion<ProductImage> {
   }
 }
 
+class $ThemesTable extends Themes with TableInfo<$ThemesTable, Theme> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ThemesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _imagePathMeta =
+      const VerificationMeta('imagePath');
+  @override
+  late final GeneratedColumn<String> imagePath = GeneratedColumn<String>(
+      'image_path', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [id, name, imagePath];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'themes';
+  @override
+  VerificationContext validateIntegrity(Insertable<Theme> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('image_path')) {
+      context.handle(_imagePathMeta,
+          imagePath.isAcceptableOrUnknown(data['image_path']!, _imagePathMeta));
+    } else if (isInserting) {
+      context.missing(_imagePathMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Theme map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Theme(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      imagePath: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}image_path'])!,
+    );
+  }
+
+  @override
+  $ThemesTable createAlias(String alias) {
+    return $ThemesTable(attachedDatabase, alias);
+  }
+}
+
+class Theme extends DataClass implements Insertable<Theme> {
+  final int id;
+  final String name;
+  final String imagePath;
+  const Theme({required this.id, required this.name, required this.imagePath});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['image_path'] = Variable<String>(imagePath);
+    return map;
+  }
+
+  ThemesCompanion toCompanion(bool nullToAbsent) {
+    return ThemesCompanion(
+      id: Value(id),
+      name: Value(name),
+      imagePath: Value(imagePath),
+    );
+  }
+
+  factory Theme.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Theme(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      imagePath: serializer.fromJson<String>(json['imagePath']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'imagePath': serializer.toJson<String>(imagePath),
+    };
+  }
+
+  Theme copyWith({int? id, String? name, String? imagePath}) => Theme(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        imagePath: imagePath ?? this.imagePath,
+      );
+  Theme copyWithCompanion(ThemesCompanion data) {
+    return Theme(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Theme(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('imagePath: $imagePath')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, imagePath);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Theme &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.imagePath == this.imagePath);
+}
+
+class ThemesCompanion extends UpdateCompanion<Theme> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<String> imagePath;
+  const ThemesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.imagePath = const Value.absent(),
+  });
+  ThemesCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    required String imagePath,
+  })  : name = Value(name),
+        imagePath = Value(imagePath);
+  static Insertable<Theme> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<String>? imagePath,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (imagePath != null) 'image_path': imagePath,
+    });
+  }
+
+  ThemesCompanion copyWith(
+      {Value<int>? id, Value<String>? name, Value<String>? imagePath}) {
+    return ThemesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      imagePath: imagePath ?? this.imagePath,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (imagePath.present) {
+      map['image_path'] = Variable<String>(imagePath.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ThemesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('imagePath: $imagePath')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SellersTable extends Sellers with TableInfo<$SellersTable, Seller> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SellersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  @override
+  List<GeneratedColumn> get $columns => [id, name];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sellers';
+  @override
+  VerificationContext validateIntegrity(Insertable<Seller> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Seller map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Seller(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+    );
+  }
+
+  @override
+  $SellersTable createAlias(String alias) {
+    return $SellersTable(attachedDatabase, alias);
+  }
+}
+
+class Seller extends DataClass implements Insertable<Seller> {
+  final int id;
+  final String name;
+  const Seller({required this.id, required this.name});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    return map;
+  }
+
+  SellersCompanion toCompanion(bool nullToAbsent) {
+    return SellersCompanion(
+      id: Value(id),
+      name: Value(name),
+    );
+  }
+
+  factory Seller.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Seller(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+    };
+  }
+
+  Seller copyWith({int? id, String? name}) => Seller(
+        id: id ?? this.id,
+        name: name ?? this.name,
+      );
+  Seller copyWithCompanion(SellersCompanion data) {
+    return Seller(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Seller(')
+          ..write('id: $id, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Seller && other.id == this.id && other.name == this.name);
+}
+
+class SellersCompanion extends UpdateCompanion<Seller> {
+  final Value<int> id;
+  final Value<String> name;
+  const SellersCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+  });
+  SellersCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+  }) : name = Value(name);
+  static Insertable<Seller> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+    });
+  }
+
+  SellersCompanion copyWith({Value<int>? id, Value<String>? name}) {
+    return SellersCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SellersCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CategoriesTable extends Categories
+    with TableInfo<$CategoriesTable, Category> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CategoriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  @override
+  List<GeneratedColumn> get $columns => [id, name];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'categories';
+  @override
+  VerificationContext validateIntegrity(Insertable<Category> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Category map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Category(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+    );
+  }
+
+  @override
+  $CategoriesTable createAlias(String alias) {
+    return $CategoriesTable(attachedDatabase, alias);
+  }
+}
+
+class Category extends DataClass implements Insertable<Category> {
+  final int id;
+  final String name;
+  const Category({required this.id, required this.name});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    return map;
+  }
+
+  CategoriesCompanion toCompanion(bool nullToAbsent) {
+    return CategoriesCompanion(
+      id: Value(id),
+      name: Value(name),
+    );
+  }
+
+  factory Category.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Category(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+    };
+  }
+
+  Category copyWith({int? id, String? name}) => Category(
+        id: id ?? this.id,
+        name: name ?? this.name,
+      );
+  Category copyWithCompanion(CategoriesCompanion data) {
+    return Category(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Category(')
+          ..write('id: $id, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Category && other.id == this.id && other.name == this.name);
+}
+
+class CategoriesCompanion extends UpdateCompanion<Category> {
+  final Value<int> id;
+  final Value<String> name;
+  const CategoriesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+  });
+  CategoriesCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+  }) : name = Value(name);
+  static Insertable<Category> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+    });
+  }
+
+  CategoriesCompanion copyWith({Value<int>? id, Value<String>? name}) {
+    return CategoriesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CategoriesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ProductThemesTable extends ProductThemes
+    with TableInfo<$ProductThemesTable, ProductTheme> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ProductThemesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _productIdMeta =
+      const VerificationMeta('productId');
+  @override
+  late final GeneratedColumn<int> productId = GeneratedColumn<int>(
+      'product_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES products (id) ON DELETE CASCADE'));
+  static const VerificationMeta _themeIdMeta =
+      const VerificationMeta('themeId');
+  @override
+  late final GeneratedColumn<int> themeId = GeneratedColumn<int>(
+      'theme_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES themes (id) ON DELETE CASCADE'));
+  @override
+  List<GeneratedColumn> get $columns => [id, productId, themeId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'product_themes';
+  @override
+  VerificationContext validateIntegrity(Insertable<ProductTheme> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('product_id')) {
+      context.handle(_productIdMeta,
+          productId.isAcceptableOrUnknown(data['product_id']!, _productIdMeta));
+    } else if (isInserting) {
+      context.missing(_productIdMeta);
+    }
+    if (data.containsKey('theme_id')) {
+      context.handle(_themeIdMeta,
+          themeId.isAcceptableOrUnknown(data['theme_id']!, _themeIdMeta));
+    } else if (isInserting) {
+      context.missing(_themeIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ProductTheme map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ProductTheme(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      productId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}product_id'])!,
+      themeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}theme_id'])!,
+    );
+  }
+
+  @override
+  $ProductThemesTable createAlias(String alias) {
+    return $ProductThemesTable(attachedDatabase, alias);
+  }
+}
+
+class ProductTheme extends DataClass implements Insertable<ProductTheme> {
+  final int id;
+  final int productId;
+  final int themeId;
+  const ProductTheme(
+      {required this.id, required this.productId, required this.themeId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['product_id'] = Variable<int>(productId);
+    map['theme_id'] = Variable<int>(themeId);
+    return map;
+  }
+
+  ProductThemesCompanion toCompanion(bool nullToAbsent) {
+    return ProductThemesCompanion(
+      id: Value(id),
+      productId: Value(productId),
+      themeId: Value(themeId),
+    );
+  }
+
+  factory ProductTheme.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ProductTheme(
+      id: serializer.fromJson<int>(json['id']),
+      productId: serializer.fromJson<int>(json['productId']),
+      themeId: serializer.fromJson<int>(json['themeId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'productId': serializer.toJson<int>(productId),
+      'themeId': serializer.toJson<int>(themeId),
+    };
+  }
+
+  ProductTheme copyWith({int? id, int? productId, int? themeId}) =>
+      ProductTheme(
+        id: id ?? this.id,
+        productId: productId ?? this.productId,
+        themeId: themeId ?? this.themeId,
+      );
+  ProductTheme copyWithCompanion(ProductThemesCompanion data) {
+    return ProductTheme(
+      id: data.id.present ? data.id.value : this.id,
+      productId: data.productId.present ? data.productId.value : this.productId,
+      themeId: data.themeId.present ? data.themeId.value : this.themeId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProductTheme(')
+          ..write('id: $id, ')
+          ..write('productId: $productId, ')
+          ..write('themeId: $themeId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, productId, themeId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProductTheme &&
+          other.id == this.id &&
+          other.productId == this.productId &&
+          other.themeId == this.themeId);
+}
+
+class ProductThemesCompanion extends UpdateCompanion<ProductTheme> {
+  final Value<int> id;
+  final Value<int> productId;
+  final Value<int> themeId;
+  const ProductThemesCompanion({
+    this.id = const Value.absent(),
+    this.productId = const Value.absent(),
+    this.themeId = const Value.absent(),
+  });
+  ProductThemesCompanion.insert({
+    this.id = const Value.absent(),
+    required int productId,
+    required int themeId,
+  })  : productId = Value(productId),
+        themeId = Value(themeId);
+  static Insertable<ProductTheme> custom({
+    Expression<int>? id,
+    Expression<int>? productId,
+    Expression<int>? themeId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (productId != null) 'product_id': productId,
+      if (themeId != null) 'theme_id': themeId,
+    });
+  }
+
+  ProductThemesCompanion copyWith(
+      {Value<int>? id, Value<int>? productId, Value<int>? themeId}) {
+    return ProductThemesCompanion(
+      id: id ?? this.id,
+      productId: productId ?? this.productId,
+      themeId: themeId ?? this.themeId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (productId.present) {
+      map['product_id'] = Variable<int>(productId.value);
+    }
+    if (themeId.present) {
+      map['theme_id'] = Variable<int>(themeId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProductThemesCompanion(')
+          ..write('id: $id, ')
+          ..write('productId: $productId, ')
+          ..write('themeId: $themeId')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ProductSellersTable extends ProductSellers
+    with TableInfo<$ProductSellersTable, ProductSeller> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ProductSellersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _productIdMeta =
+      const VerificationMeta('productId');
+  @override
+  late final GeneratedColumn<int> productId = GeneratedColumn<int>(
+      'product_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES products (id) ON DELETE CASCADE'));
+  static const VerificationMeta _sellerIdMeta =
+      const VerificationMeta('sellerId');
+  @override
+  late final GeneratedColumn<int> sellerId = GeneratedColumn<int>(
+      'seller_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES sellers (id) ON DELETE CASCADE'));
+  @override
+  List<GeneratedColumn> get $columns => [id, productId, sellerId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'product_sellers';
+  @override
+  VerificationContext validateIntegrity(Insertable<ProductSeller> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('product_id')) {
+      context.handle(_productIdMeta,
+          productId.isAcceptableOrUnknown(data['product_id']!, _productIdMeta));
+    } else if (isInserting) {
+      context.missing(_productIdMeta);
+    }
+    if (data.containsKey('seller_id')) {
+      context.handle(_sellerIdMeta,
+          sellerId.isAcceptableOrUnknown(data['seller_id']!, _sellerIdMeta));
+    } else if (isInserting) {
+      context.missing(_sellerIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ProductSeller map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ProductSeller(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      productId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}product_id'])!,
+      sellerId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}seller_id'])!,
+    );
+  }
+
+  @override
+  $ProductSellersTable createAlias(String alias) {
+    return $ProductSellersTable(attachedDatabase, alias);
+  }
+}
+
+class ProductSeller extends DataClass implements Insertable<ProductSeller> {
+  final int id;
+  final int productId;
+  final int sellerId;
+  const ProductSeller(
+      {required this.id, required this.productId, required this.sellerId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['product_id'] = Variable<int>(productId);
+    map['seller_id'] = Variable<int>(sellerId);
+    return map;
+  }
+
+  ProductSellersCompanion toCompanion(bool nullToAbsent) {
+    return ProductSellersCompanion(
+      id: Value(id),
+      productId: Value(productId),
+      sellerId: Value(sellerId),
+    );
+  }
+
+  factory ProductSeller.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ProductSeller(
+      id: serializer.fromJson<int>(json['id']),
+      productId: serializer.fromJson<int>(json['productId']),
+      sellerId: serializer.fromJson<int>(json['sellerId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'productId': serializer.toJson<int>(productId),
+      'sellerId': serializer.toJson<int>(sellerId),
+    };
+  }
+
+  ProductSeller copyWith({int? id, int? productId, int? sellerId}) =>
+      ProductSeller(
+        id: id ?? this.id,
+        productId: productId ?? this.productId,
+        sellerId: sellerId ?? this.sellerId,
+      );
+  ProductSeller copyWithCompanion(ProductSellersCompanion data) {
+    return ProductSeller(
+      id: data.id.present ? data.id.value : this.id,
+      productId: data.productId.present ? data.productId.value : this.productId,
+      sellerId: data.sellerId.present ? data.sellerId.value : this.sellerId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProductSeller(')
+          ..write('id: $id, ')
+          ..write('productId: $productId, ')
+          ..write('sellerId: $sellerId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, productId, sellerId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProductSeller &&
+          other.id == this.id &&
+          other.productId == this.productId &&
+          other.sellerId == this.sellerId);
+}
+
+class ProductSellersCompanion extends UpdateCompanion<ProductSeller> {
+  final Value<int> id;
+  final Value<int> productId;
+  final Value<int> sellerId;
+  const ProductSellersCompanion({
+    this.id = const Value.absent(),
+    this.productId = const Value.absent(),
+    this.sellerId = const Value.absent(),
+  });
+  ProductSellersCompanion.insert({
+    this.id = const Value.absent(),
+    required int productId,
+    required int sellerId,
+  })  : productId = Value(productId),
+        sellerId = Value(sellerId);
+  static Insertable<ProductSeller> custom({
+    Expression<int>? id,
+    Expression<int>? productId,
+    Expression<int>? sellerId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (productId != null) 'product_id': productId,
+      if (sellerId != null) 'seller_id': sellerId,
+    });
+  }
+
+  ProductSellersCompanion copyWith(
+      {Value<int>? id, Value<int>? productId, Value<int>? sellerId}) {
+    return ProductSellersCompanion(
+      id: id ?? this.id,
+      productId: productId ?? this.productId,
+      sellerId: sellerId ?? this.sellerId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (productId.present) {
+      map['product_id'] = Variable<int>(productId.value);
+    }
+    if (sellerId.present) {
+      map['seller_id'] = Variable<int>(sellerId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProductSellersCompanion(')
+          ..write('id: $id, ')
+          ..write('productId: $productId, ')
+          ..write('sellerId: $sellerId')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ProductCategoriesTable extends ProductCategories
+    with TableInfo<$ProductCategoriesTable, ProductCategory> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ProductCategoriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _productIdMeta =
+      const VerificationMeta('productId');
+  @override
+  late final GeneratedColumn<int> productId = GeneratedColumn<int>(
+      'product_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES products (id) ON DELETE CASCADE'));
+  static const VerificationMeta _categoryIdMeta =
+      const VerificationMeta('categoryId');
+  @override
+  late final GeneratedColumn<int> categoryId = GeneratedColumn<int>(
+      'category_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES categories (id) ON DELETE CASCADE'));
+  @override
+  List<GeneratedColumn> get $columns => [id, productId, categoryId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'product_categories';
+  @override
+  VerificationContext validateIntegrity(Insertable<ProductCategory> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('product_id')) {
+      context.handle(_productIdMeta,
+          productId.isAcceptableOrUnknown(data['product_id']!, _productIdMeta));
+    } else if (isInserting) {
+      context.missing(_productIdMeta);
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+          _categoryIdMeta,
+          categoryId.isAcceptableOrUnknown(
+              data['category_id']!, _categoryIdMeta));
+    } else if (isInserting) {
+      context.missing(_categoryIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ProductCategory map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ProductCategory(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      productId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}product_id'])!,
+      categoryId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}category_id'])!,
+    );
+  }
+
+  @override
+  $ProductCategoriesTable createAlias(String alias) {
+    return $ProductCategoriesTable(attachedDatabase, alias);
+  }
+}
+
+class ProductCategory extends DataClass implements Insertable<ProductCategory> {
+  final int id;
+  final int productId;
+  final int categoryId;
+  const ProductCategory(
+      {required this.id, required this.productId, required this.categoryId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['product_id'] = Variable<int>(productId);
+    map['category_id'] = Variable<int>(categoryId);
+    return map;
+  }
+
+  ProductCategoriesCompanion toCompanion(bool nullToAbsent) {
+    return ProductCategoriesCompanion(
+      id: Value(id),
+      productId: Value(productId),
+      categoryId: Value(categoryId),
+    );
+  }
+
+  factory ProductCategory.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ProductCategory(
+      id: serializer.fromJson<int>(json['id']),
+      productId: serializer.fromJson<int>(json['productId']),
+      categoryId: serializer.fromJson<int>(json['categoryId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'productId': serializer.toJson<int>(productId),
+      'categoryId': serializer.toJson<int>(categoryId),
+    };
+  }
+
+  ProductCategory copyWith({int? id, int? productId, int? categoryId}) =>
+      ProductCategory(
+        id: id ?? this.id,
+        productId: productId ?? this.productId,
+        categoryId: categoryId ?? this.categoryId,
+      );
+  ProductCategory copyWithCompanion(ProductCategoriesCompanion data) {
+    return ProductCategory(
+      id: data.id.present ? data.id.value : this.id,
+      productId: data.productId.present ? data.productId.value : this.productId,
+      categoryId:
+          data.categoryId.present ? data.categoryId.value : this.categoryId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProductCategory(')
+          ..write('id: $id, ')
+          ..write('productId: $productId, ')
+          ..write('categoryId: $categoryId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, productId, categoryId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProductCategory &&
+          other.id == this.id &&
+          other.productId == this.productId &&
+          other.categoryId == this.categoryId);
+}
+
+class ProductCategoriesCompanion extends UpdateCompanion<ProductCategory> {
+  final Value<int> id;
+  final Value<int> productId;
+  final Value<int> categoryId;
+  const ProductCategoriesCompanion({
+    this.id = const Value.absent(),
+    this.productId = const Value.absent(),
+    this.categoryId = const Value.absent(),
+  });
+  ProductCategoriesCompanion.insert({
+    this.id = const Value.absent(),
+    required int productId,
+    required int categoryId,
+  })  : productId = Value(productId),
+        categoryId = Value(categoryId);
+  static Insertable<ProductCategory> custom({
+    Expression<int>? id,
+    Expression<int>? productId,
+    Expression<int>? categoryId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (productId != null) 'product_id': productId,
+      if (categoryId != null) 'category_id': categoryId,
+    });
+  }
+
+  ProductCategoriesCompanion copyWith(
+      {Value<int>? id, Value<int>? productId, Value<int>? categoryId}) {
+    return ProductCategoriesCompanion(
+      id: id ?? this.id,
+      productId: productId ?? this.productId,
+      categoryId: categoryId ?? this.categoryId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (productId.present) {
+      map['product_id'] = Variable<int>(productId.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<int>(categoryId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProductCategoriesCompanion(')
+          ..write('id: $id, ')
+          ..write('productId: $productId, ')
+          ..write('categoryId: $categoryId')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ProductsTable products = $ProductsTable(this);
   late final $ProductImagesTable productImages = $ProductImagesTable(this);
+  late final $ThemesTable themes = $ThemesTable(this);
+  late final $SellersTable sellers = $SellersTable(this);
+  late final $CategoriesTable categories = $CategoriesTable(this);
+  late final $ProductThemesTable productThemes = $ProductThemesTable(this);
+  late final $ProductSellersTable productSellers = $ProductSellersTable(this);
+  late final $ProductCategoriesTable productCategories =
+      $ProductCategoriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [products, productImages];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+        products,
+        productImages,
+        themes,
+        sellers,
+        categories,
+        productThemes,
+        productSellers,
+        productCategories
+      ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
+        [
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('products',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('product_images', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('products',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('product_themes', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('themes',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('product_themes', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('products',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('product_sellers', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('sellers',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('product_sellers', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('products',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('product_categories', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('categories',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('product_categories', kind: UpdateKind.delete),
+            ],
+          ),
+        ],
+      );
 }
 
 typedef $$ProductsTableCreateCompanionBuilder = ProductsCompanion Function({
   Value<int> id,
   required String name,
-  required String theme,
-  required String seller,
-  required String categoryGroup,
   required int basePrice,
   required String description,
   Value<int> stock,
@@ -911,9 +2109,6 @@ typedef $$ProductsTableCreateCompanionBuilder = ProductsCompanion Function({
 typedef $$ProductsTableUpdateCompanionBuilder = ProductsCompanion Function({
   Value<int> id,
   Value<String> name,
-  Value<String> theme,
-  Value<String> seller,
-  Value<String> categoryGroup,
   Value<int> basePrice,
   Value<String> description,
   Value<int> stock,
@@ -921,6 +2116,73 @@ typedef $$ProductsTableUpdateCompanionBuilder = ProductsCompanion Function({
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
 });
+
+final class $$ProductsTableReferences
+    extends BaseReferences<_$AppDatabase, $ProductsTable, Product> {
+  $$ProductsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$ProductImagesTable, List<ProductImage>>
+      _productImagesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.productImages,
+              aliasName: $_aliasNameGenerator(
+                  db.products.id, db.productImages.productId));
+
+  $$ProductImagesTableProcessedTableManager get productImagesRefs {
+    final manager = $$ProductImagesTableTableManager($_db, $_db.productImages)
+        .filter((f) => f.productId.id($_item.id));
+
+    final cache = $_typedResult.readTableOrNull(_productImagesRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$ProductThemesTable, List<ProductTheme>>
+      _productThemesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.productThemes,
+              aliasName: $_aliasNameGenerator(
+                  db.products.id, db.productThemes.productId));
+
+  $$ProductThemesTableProcessedTableManager get productThemesRefs {
+    final manager = $$ProductThemesTableTableManager($_db, $_db.productThemes)
+        .filter((f) => f.productId.id($_item.id));
+
+    final cache = $_typedResult.readTableOrNull(_productThemesRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$ProductSellersTable, List<ProductSeller>>
+      _productSellersRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.productSellers,
+              aliasName: $_aliasNameGenerator(
+                  db.products.id, db.productSellers.productId));
+
+  $$ProductSellersTableProcessedTableManager get productSellersRefs {
+    final manager = $$ProductSellersTableTableManager($_db, $_db.productSellers)
+        .filter((f) => f.productId.id($_item.id));
+
+    final cache = $_typedResult.readTableOrNull(_productSellersRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$ProductCategoriesTable, List<ProductCategory>>
+      _productCategoriesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.productCategories,
+              aliasName: $_aliasNameGenerator(
+                  db.products.id, db.productCategories.productId));
+
+  $$ProductCategoriesTableProcessedTableManager get productCategoriesRefs {
+    final manager =
+        $$ProductCategoriesTableTableManager($_db, $_db.productCategories)
+            .filter((f) => f.productId.id($_item.id));
+
+    final cache =
+        $_typedResult.readTableOrNull(_productCategoriesRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+}
 
 class $$ProductsTableFilterComposer
     extends Composer<_$AppDatabase, $ProductsTable> {
@@ -936,15 +2198,6 @@ class $$ProductsTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get theme => $composableBuilder(
-      column: $table.theme, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get seller => $composableBuilder(
-      column: $table.seller, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get categoryGroup => $composableBuilder(
-      column: $table.categoryGroup, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get basePrice => $composableBuilder(
       column: $table.basePrice, builder: (column) => ColumnFilters(column));
@@ -963,6 +2216,90 @@ class $$ProductsTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  Expression<bool> productImagesRefs(
+      Expression<bool> Function($$ProductImagesTableFilterComposer f) f) {
+    final $$ProductImagesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.productImages,
+        getReferencedColumn: (t) => t.productId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductImagesTableFilterComposer(
+              $db: $db,
+              $table: $db.productImages,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> productThemesRefs(
+      Expression<bool> Function($$ProductThemesTableFilterComposer f) f) {
+    final $$ProductThemesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.productThemes,
+        getReferencedColumn: (t) => t.productId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductThemesTableFilterComposer(
+              $db: $db,
+              $table: $db.productThemes,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> productSellersRefs(
+      Expression<bool> Function($$ProductSellersTableFilterComposer f) f) {
+    final $$ProductSellersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.productSellers,
+        getReferencedColumn: (t) => t.productId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductSellersTableFilterComposer(
+              $db: $db,
+              $table: $db.productSellers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> productCategoriesRefs(
+      Expression<bool> Function($$ProductCategoriesTableFilterComposer f) f) {
+    final $$ProductCategoriesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.productCategories,
+        getReferencedColumn: (t) => t.productId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductCategoriesTableFilterComposer(
+              $db: $db,
+              $table: $db.productCategories,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$ProductsTableOrderingComposer
@@ -979,16 +2316,6 @@ class $$ProductsTableOrderingComposer
 
   ColumnOrderings<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get theme => $composableBuilder(
-      column: $table.theme, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get seller => $composableBuilder(
-      column: $table.seller, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get categoryGroup => $composableBuilder(
-      column: $table.categoryGroup,
-      builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get basePrice => $composableBuilder(
       column: $table.basePrice, builder: (column) => ColumnOrderings(column));
@@ -1024,15 +2351,6 @@ class $$ProductsTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
-  GeneratedColumn<String> get theme =>
-      $composableBuilder(column: $table.theme, builder: (column) => column);
-
-  GeneratedColumn<String> get seller =>
-      $composableBuilder(column: $table.seller, builder: (column) => column);
-
-  GeneratedColumn<String> get categoryGroup => $composableBuilder(
-      column: $table.categoryGroup, builder: (column) => column);
-
   GeneratedColumn<int> get basePrice =>
       $composableBuilder(column: $table.basePrice, builder: (column) => column);
 
@@ -1050,6 +2368,91 @@ class $$ProductsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  Expression<T> productImagesRefs<T extends Object>(
+      Expression<T> Function($$ProductImagesTableAnnotationComposer a) f) {
+    final $$ProductImagesTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.productImages,
+        getReferencedColumn: (t) => t.productId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductImagesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.productImages,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> productThemesRefs<T extends Object>(
+      Expression<T> Function($$ProductThemesTableAnnotationComposer a) f) {
+    final $$ProductThemesTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.productThemes,
+        getReferencedColumn: (t) => t.productId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductThemesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.productThemes,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> productSellersRefs<T extends Object>(
+      Expression<T> Function($$ProductSellersTableAnnotationComposer a) f) {
+    final $$ProductSellersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.productSellers,
+        getReferencedColumn: (t) => t.productId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductSellersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.productSellers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> productCategoriesRefs<T extends Object>(
+      Expression<T> Function($$ProductCategoriesTableAnnotationComposer a) f) {
+    final $$ProductCategoriesTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.productCategories,
+            getReferencedColumn: (t) => t.productId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$ProductCategoriesTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.productCategories,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
 }
 
 class $$ProductsTableTableManager extends RootTableManager<
@@ -1061,9 +2464,13 @@ class $$ProductsTableTableManager extends RootTableManager<
     $$ProductsTableAnnotationComposer,
     $$ProductsTableCreateCompanionBuilder,
     $$ProductsTableUpdateCompanionBuilder,
-    (Product, BaseReferences<_$AppDatabase, $ProductsTable, Product>),
+    (Product, $$ProductsTableReferences),
     Product,
-    PrefetchHooks Function()> {
+    PrefetchHooks Function(
+        {bool productImagesRefs,
+        bool productThemesRefs,
+        bool productSellersRefs,
+        bool productCategoriesRefs})> {
   $$ProductsTableTableManager(_$AppDatabase db, $ProductsTable table)
       : super(TableManagerState(
           db: db,
@@ -1077,9 +2484,6 @@ class $$ProductsTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<String> name = const Value.absent(),
-            Value<String> theme = const Value.absent(),
-            Value<String> seller = const Value.absent(),
-            Value<String> categoryGroup = const Value.absent(),
             Value<int> basePrice = const Value.absent(),
             Value<String> description = const Value.absent(),
             Value<int> stock = const Value.absent(),
@@ -1090,9 +2494,6 @@ class $$ProductsTableTableManager extends RootTableManager<
               ProductsCompanion(
             id: id,
             name: name,
-            theme: theme,
-            seller: seller,
-            categoryGroup: categoryGroup,
             basePrice: basePrice,
             description: description,
             stock: stock,
@@ -1103,9 +2504,6 @@ class $$ProductsTableTableManager extends RootTableManager<
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             required String name,
-            required String theme,
-            required String seller,
-            required String categoryGroup,
             required int basePrice,
             required String description,
             Value<int> stock = const Value.absent(),
@@ -1116,9 +2514,6 @@ class $$ProductsTableTableManager extends RootTableManager<
               ProductsCompanion.insert(
             id: id,
             name: name,
-            theme: theme,
-            seller: seller,
-            categoryGroup: categoryGroup,
             basePrice: basePrice,
             description: description,
             stock: stock,
@@ -1127,9 +2522,77 @@ class $$ProductsTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) =>
+                  (e.readTable(table), $$ProductsTableReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: (
+              {productImagesRefs = false,
+              productThemesRefs = false,
+              productSellersRefs = false,
+              productCategoriesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (productImagesRefs) db.productImages,
+                if (productThemesRefs) db.productThemes,
+                if (productSellersRefs) db.productSellers,
+                if (productCategoriesRefs) db.productCategories
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (productImagesRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable: $$ProductsTableReferences
+                            ._productImagesRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$ProductsTableReferences(db, table, p0)
+                                .productImagesRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.productId == item.id),
+                        typedResults: items),
+                  if (productThemesRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable: $$ProductsTableReferences
+                            ._productThemesRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$ProductsTableReferences(db, table, p0)
+                                .productThemesRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.productId == item.id),
+                        typedResults: items),
+                  if (productSellersRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable: $$ProductsTableReferences
+                            ._productSellersRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$ProductsTableReferences(db, table, p0)
+                                .productSellersRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.productId == item.id),
+                        typedResults: items),
+                  if (productCategoriesRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable: $$ProductsTableReferences
+                            ._productCategoriesRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$ProductsTableReferences(db, table, p0)
+                                .productCategoriesRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.productId == item.id),
+                        typedResults: items)
+                ];
+              },
+            );
+          },
         ));
 }
 
@@ -1142,9 +2605,13 @@ typedef $$ProductsTableProcessedTableManager = ProcessedTableManager<
     $$ProductsTableAnnotationComposer,
     $$ProductsTableCreateCompanionBuilder,
     $$ProductsTableUpdateCompanionBuilder,
-    (Product, BaseReferences<_$AppDatabase, $ProductsTable, Product>),
+    (Product, $$ProductsTableReferences),
     Product,
-    PrefetchHooks Function()>;
+    PrefetchHooks Function(
+        {bool productImagesRefs,
+        bool productThemesRefs,
+        bool productSellersRefs,
+        bool productCategoriesRefs})>;
 typedef $$ProductImagesTableCreateCompanionBuilder = ProductImagesCompanion
     Function({
   Value<int> id,
@@ -1164,6 +2631,25 @@ typedef $$ProductImagesTableUpdateCompanionBuilder = ProductImagesCompanion
   Value<DateTime> createdAt,
 });
 
+final class $$ProductImagesTableReferences
+    extends BaseReferences<_$AppDatabase, $ProductImagesTable, ProductImage> {
+  $$ProductImagesTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProductsTable _productIdTable(_$AppDatabase db) =>
+      db.products.createAlias(
+          $_aliasNameGenerator(db.productImages.productId, db.products.id));
+
+  $$ProductsTableProcessedTableManager get productId {
+    final manager = $$ProductsTableTableManager($_db, $_db.products)
+        .filter((f) => f.id($_item.productId));
+    final item = $_typedResult.readTableOrNull(_productIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
 class $$ProductImagesTableFilterComposer
     extends Composer<_$AppDatabase, $ProductImagesTable> {
   $$ProductImagesTableFilterComposer({
@@ -1176,9 +2662,6 @@ class $$ProductImagesTableFilterComposer
   ColumnFilters<int> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get productId => $composableBuilder(
-      column: $table.productId, builder: (column) => ColumnFilters(column));
-
   ColumnFilters<String> get imagePath => $composableBuilder(
       column: $table.imagePath, builder: (column) => ColumnFilters(column));
 
@@ -1190,6 +2673,26 @@ class $$ProductImagesTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  $$ProductsTableFilterComposer get productId {
+    final $$ProductsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.productId,
+        referencedTable: $db.products,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductsTableFilterComposer(
+              $db: $db,
+              $table: $db.products,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
 class $$ProductImagesTableOrderingComposer
@@ -1204,9 +2707,6 @@ class $$ProductImagesTableOrderingComposer
   ColumnOrderings<int> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get productId => $composableBuilder(
-      column: $table.productId, builder: (column) => ColumnOrderings(column));
-
   ColumnOrderings<String> get imagePath => $composableBuilder(
       column: $table.imagePath, builder: (column) => ColumnOrderings(column));
 
@@ -1218,6 +2718,26 @@ class $$ProductImagesTableOrderingComposer
 
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  $$ProductsTableOrderingComposer get productId {
+    final $$ProductsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.productId,
+        referencedTable: $db.products,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductsTableOrderingComposer(
+              $db: $db,
+              $table: $db.products,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
 class $$ProductImagesTableAnnotationComposer
@@ -1232,9 +2752,6 @@ class $$ProductImagesTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<int> get productId =>
-      $composableBuilder(column: $table.productId, builder: (column) => column);
-
   GeneratedColumn<String> get imagePath =>
       $composableBuilder(column: $table.imagePath, builder: (column) => column);
 
@@ -1246,6 +2763,26 @@ class $$ProductImagesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ProductsTableAnnotationComposer get productId {
+    final $$ProductsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.productId,
+        referencedTable: $db.products,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.products,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
 class $$ProductImagesTableTableManager extends RootTableManager<
@@ -1257,12 +2794,9 @@ class $$ProductImagesTableTableManager extends RootTableManager<
     $$ProductImagesTableAnnotationComposer,
     $$ProductImagesTableCreateCompanionBuilder,
     $$ProductImagesTableUpdateCompanionBuilder,
-    (
-      ProductImage,
-      BaseReferences<_$AppDatabase, $ProductImagesTable, ProductImage>
-    ),
+    (ProductImage, $$ProductImagesTableReferences),
     ProductImage,
-    PrefetchHooks Function()> {
+    PrefetchHooks Function({bool productId})> {
   $$ProductImagesTableTableManager(_$AppDatabase db, $ProductImagesTable table)
       : super(TableManagerState(
           db: db,
@@ -1306,9 +2840,46 @@ class $$ProductImagesTableTableManager extends RootTableManager<
             createdAt: createdAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable(table),
+                    $$ProductImagesTableReferences(db, table, e)
+                  ))
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({productId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (productId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.productId,
+                    referencedTable:
+                        $$ProductImagesTableReferences._productIdTable(db),
+                    referencedColumn:
+                        $$ProductImagesTableReferences._productIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ));
 }
 
@@ -1321,12 +2892,1572 @@ typedef $$ProductImagesTableProcessedTableManager = ProcessedTableManager<
     $$ProductImagesTableAnnotationComposer,
     $$ProductImagesTableCreateCompanionBuilder,
     $$ProductImagesTableUpdateCompanionBuilder,
-    (
-      ProductImage,
-      BaseReferences<_$AppDatabase, $ProductImagesTable, ProductImage>
-    ),
+    (ProductImage, $$ProductImagesTableReferences),
     ProductImage,
-    PrefetchHooks Function()>;
+    PrefetchHooks Function({bool productId})>;
+typedef $$ThemesTableCreateCompanionBuilder = ThemesCompanion Function({
+  Value<int> id,
+  required String name,
+  required String imagePath,
+});
+typedef $$ThemesTableUpdateCompanionBuilder = ThemesCompanion Function({
+  Value<int> id,
+  Value<String> name,
+  Value<String> imagePath,
+});
+
+final class $$ThemesTableReferences
+    extends BaseReferences<_$AppDatabase, $ThemesTable, Theme> {
+  $$ThemesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$ProductThemesTable, List<ProductTheme>>
+      _productThemesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.productThemes,
+              aliasName:
+                  $_aliasNameGenerator(db.themes.id, db.productThemes.themeId));
+
+  $$ProductThemesTableProcessedTableManager get productThemesRefs {
+    final manager = $$ProductThemesTableTableManager($_db, $_db.productThemes)
+        .filter((f) => f.themeId.id($_item.id));
+
+    final cache = $_typedResult.readTableOrNull(_productThemesRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+}
+
+class $$ThemesTableFilterComposer
+    extends Composer<_$AppDatabase, $ThemesTable> {
+  $$ThemesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get imagePath => $composableBuilder(
+      column: $table.imagePath, builder: (column) => ColumnFilters(column));
+
+  Expression<bool> productThemesRefs(
+      Expression<bool> Function($$ProductThemesTableFilterComposer f) f) {
+    final $$ProductThemesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.productThemes,
+        getReferencedColumn: (t) => t.themeId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductThemesTableFilterComposer(
+              $db: $db,
+              $table: $db.productThemes,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+}
+
+class $$ThemesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ThemesTable> {
+  $$ThemesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get imagePath => $composableBuilder(
+      column: $table.imagePath, builder: (column) => ColumnOrderings(column));
+}
+
+class $$ThemesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ThemesTable> {
+  $$ThemesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get imagePath =>
+      $composableBuilder(column: $table.imagePath, builder: (column) => column);
+
+  Expression<T> productThemesRefs<T extends Object>(
+      Expression<T> Function($$ProductThemesTableAnnotationComposer a) f) {
+    final $$ProductThemesTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.productThemes,
+        getReferencedColumn: (t) => t.themeId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductThemesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.productThemes,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+}
+
+class $$ThemesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ThemesTable,
+    Theme,
+    $$ThemesTableFilterComposer,
+    $$ThemesTableOrderingComposer,
+    $$ThemesTableAnnotationComposer,
+    $$ThemesTableCreateCompanionBuilder,
+    $$ThemesTableUpdateCompanionBuilder,
+    (Theme, $$ThemesTableReferences),
+    Theme,
+    PrefetchHooks Function({bool productThemesRefs})> {
+  $$ThemesTableTableManager(_$AppDatabase db, $ThemesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ThemesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ThemesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ThemesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String> imagePath = const Value.absent(),
+          }) =>
+              ThemesCompanion(
+            id: id,
+            name: name,
+            imagePath: imagePath,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String name,
+            required String imagePath,
+          }) =>
+              ThemesCompanion.insert(
+            id: id,
+            name: name,
+            imagePath: imagePath,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) =>
+                  (e.readTable(table), $$ThemesTableReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: ({productThemesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (productThemesRefs) db.productThemes
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (productThemesRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable:
+                            $$ThemesTableReferences._productThemesRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$ThemesTableReferences(db, table, p0)
+                                .productThemesRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.themeId == item.id),
+                        typedResults: items)
+                ];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$ThemesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $ThemesTable,
+    Theme,
+    $$ThemesTableFilterComposer,
+    $$ThemesTableOrderingComposer,
+    $$ThemesTableAnnotationComposer,
+    $$ThemesTableCreateCompanionBuilder,
+    $$ThemesTableUpdateCompanionBuilder,
+    (Theme, $$ThemesTableReferences),
+    Theme,
+    PrefetchHooks Function({bool productThemesRefs})>;
+typedef $$SellersTableCreateCompanionBuilder = SellersCompanion Function({
+  Value<int> id,
+  required String name,
+});
+typedef $$SellersTableUpdateCompanionBuilder = SellersCompanion Function({
+  Value<int> id,
+  Value<String> name,
+});
+
+final class $$SellersTableReferences
+    extends BaseReferences<_$AppDatabase, $SellersTable, Seller> {
+  $$SellersTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$ProductSellersTable, List<ProductSeller>>
+      _productSellersRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.productSellers,
+              aliasName: $_aliasNameGenerator(
+                  db.sellers.id, db.productSellers.sellerId));
+
+  $$ProductSellersTableProcessedTableManager get productSellersRefs {
+    final manager = $$ProductSellersTableTableManager($_db, $_db.productSellers)
+        .filter((f) => f.sellerId.id($_item.id));
+
+    final cache = $_typedResult.readTableOrNull(_productSellersRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+}
+
+class $$SellersTableFilterComposer
+    extends Composer<_$AppDatabase, $SellersTable> {
+  $$SellersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  Expression<bool> productSellersRefs(
+      Expression<bool> Function($$ProductSellersTableFilterComposer f) f) {
+    final $$ProductSellersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.productSellers,
+        getReferencedColumn: (t) => t.sellerId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductSellersTableFilterComposer(
+              $db: $db,
+              $table: $db.productSellers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+}
+
+class $$SellersTableOrderingComposer
+    extends Composer<_$AppDatabase, $SellersTable> {
+  $$SellersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+}
+
+class $$SellersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SellersTable> {
+  $$SellersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  Expression<T> productSellersRefs<T extends Object>(
+      Expression<T> Function($$ProductSellersTableAnnotationComposer a) f) {
+    final $$ProductSellersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.productSellers,
+        getReferencedColumn: (t) => t.sellerId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductSellersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.productSellers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+}
+
+class $$SellersTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $SellersTable,
+    Seller,
+    $$SellersTableFilterComposer,
+    $$SellersTableOrderingComposer,
+    $$SellersTableAnnotationComposer,
+    $$SellersTableCreateCompanionBuilder,
+    $$SellersTableUpdateCompanionBuilder,
+    (Seller, $$SellersTableReferences),
+    Seller,
+    PrefetchHooks Function({bool productSellersRefs})> {
+  $$SellersTableTableManager(_$AppDatabase db, $SellersTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SellersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SellersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SellersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> name = const Value.absent(),
+          }) =>
+              SellersCompanion(
+            id: id,
+            name: name,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String name,
+          }) =>
+              SellersCompanion.insert(
+            id: id,
+            name: name,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) =>
+                  (e.readTable(table), $$SellersTableReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: ({productSellersRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (productSellersRefs) db.productSellers
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (productSellersRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable: $$SellersTableReferences
+                            ._productSellersRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$SellersTableReferences(db, table, p0)
+                                .productSellersRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.sellerId == item.id),
+                        typedResults: items)
+                ];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$SellersTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $SellersTable,
+    Seller,
+    $$SellersTableFilterComposer,
+    $$SellersTableOrderingComposer,
+    $$SellersTableAnnotationComposer,
+    $$SellersTableCreateCompanionBuilder,
+    $$SellersTableUpdateCompanionBuilder,
+    (Seller, $$SellersTableReferences),
+    Seller,
+    PrefetchHooks Function({bool productSellersRefs})>;
+typedef $$CategoriesTableCreateCompanionBuilder = CategoriesCompanion Function({
+  Value<int> id,
+  required String name,
+});
+typedef $$CategoriesTableUpdateCompanionBuilder = CategoriesCompanion Function({
+  Value<int> id,
+  Value<String> name,
+});
+
+final class $$CategoriesTableReferences
+    extends BaseReferences<_$AppDatabase, $CategoriesTable, Category> {
+  $$CategoriesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$ProductCategoriesTable, List<ProductCategory>>
+      _productCategoriesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.productCategories,
+              aliasName: $_aliasNameGenerator(
+                  db.categories.id, db.productCategories.categoryId));
+
+  $$ProductCategoriesTableProcessedTableManager get productCategoriesRefs {
+    final manager =
+        $$ProductCategoriesTableTableManager($_db, $_db.productCategories)
+            .filter((f) => f.categoryId.id($_item.id));
+
+    final cache =
+        $_typedResult.readTableOrNull(_productCategoriesRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+}
+
+class $$CategoriesTableFilterComposer
+    extends Composer<_$AppDatabase, $CategoriesTable> {
+  $$CategoriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  Expression<bool> productCategoriesRefs(
+      Expression<bool> Function($$ProductCategoriesTableFilterComposer f) f) {
+    final $$ProductCategoriesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.productCategories,
+        getReferencedColumn: (t) => t.categoryId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductCategoriesTableFilterComposer(
+              $db: $db,
+              $table: $db.productCategories,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+}
+
+class $$CategoriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CategoriesTable> {
+  $$CategoriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+}
+
+class $$CategoriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CategoriesTable> {
+  $$CategoriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  Expression<T> productCategoriesRefs<T extends Object>(
+      Expression<T> Function($$ProductCategoriesTableAnnotationComposer a) f) {
+    final $$ProductCategoriesTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.productCategories,
+            getReferencedColumn: (t) => t.categoryId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$ProductCategoriesTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.productCategories,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
+}
+
+class $$CategoriesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $CategoriesTable,
+    Category,
+    $$CategoriesTableFilterComposer,
+    $$CategoriesTableOrderingComposer,
+    $$CategoriesTableAnnotationComposer,
+    $$CategoriesTableCreateCompanionBuilder,
+    $$CategoriesTableUpdateCompanionBuilder,
+    (Category, $$CategoriesTableReferences),
+    Category,
+    PrefetchHooks Function({bool productCategoriesRefs})> {
+  $$CategoriesTableTableManager(_$AppDatabase db, $CategoriesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CategoriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CategoriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CategoriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> name = const Value.absent(),
+          }) =>
+              CategoriesCompanion(
+            id: id,
+            name: name,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String name,
+          }) =>
+              CategoriesCompanion.insert(
+            id: id,
+            name: name,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$CategoriesTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({productCategoriesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (productCategoriesRefs) db.productCategories
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (productCategoriesRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable: $$CategoriesTableReferences
+                            ._productCategoriesRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$CategoriesTableReferences(db, table, p0)
+                                .productCategoriesRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.categoryId == item.id),
+                        typedResults: items)
+                ];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$CategoriesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $CategoriesTable,
+    Category,
+    $$CategoriesTableFilterComposer,
+    $$CategoriesTableOrderingComposer,
+    $$CategoriesTableAnnotationComposer,
+    $$CategoriesTableCreateCompanionBuilder,
+    $$CategoriesTableUpdateCompanionBuilder,
+    (Category, $$CategoriesTableReferences),
+    Category,
+    PrefetchHooks Function({bool productCategoriesRefs})>;
+typedef $$ProductThemesTableCreateCompanionBuilder = ProductThemesCompanion
+    Function({
+  Value<int> id,
+  required int productId,
+  required int themeId,
+});
+typedef $$ProductThemesTableUpdateCompanionBuilder = ProductThemesCompanion
+    Function({
+  Value<int> id,
+  Value<int> productId,
+  Value<int> themeId,
+});
+
+final class $$ProductThemesTableReferences
+    extends BaseReferences<_$AppDatabase, $ProductThemesTable, ProductTheme> {
+  $$ProductThemesTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProductsTable _productIdTable(_$AppDatabase db) =>
+      db.products.createAlias(
+          $_aliasNameGenerator(db.productThemes.productId, db.products.id));
+
+  $$ProductsTableProcessedTableManager get productId {
+    final manager = $$ProductsTableTableManager($_db, $_db.products)
+        .filter((f) => f.id($_item.productId));
+    final item = $_typedResult.readTableOrNull(_productIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $ThemesTable _themeIdTable(_$AppDatabase db) => db.themes.createAlias(
+      $_aliasNameGenerator(db.productThemes.themeId, db.themes.id));
+
+  $$ThemesTableProcessedTableManager get themeId {
+    final manager = $$ThemesTableTableManager($_db, $_db.themes)
+        .filter((f) => f.id($_item.themeId));
+    final item = $_typedResult.readTableOrNull(_themeIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$ProductThemesTableFilterComposer
+    extends Composer<_$AppDatabase, $ProductThemesTable> {
+  $$ProductThemesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  $$ProductsTableFilterComposer get productId {
+    final $$ProductsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.productId,
+        referencedTable: $db.products,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductsTableFilterComposer(
+              $db: $db,
+              $table: $db.products,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$ThemesTableFilterComposer get themeId {
+    final $$ThemesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.themeId,
+        referencedTable: $db.themes,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ThemesTableFilterComposer(
+              $db: $db,
+              $table: $db.themes,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ProductThemesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ProductThemesTable> {
+  $$ProductThemesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  $$ProductsTableOrderingComposer get productId {
+    final $$ProductsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.productId,
+        referencedTable: $db.products,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductsTableOrderingComposer(
+              $db: $db,
+              $table: $db.products,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$ThemesTableOrderingComposer get themeId {
+    final $$ThemesTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.themeId,
+        referencedTable: $db.themes,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ThemesTableOrderingComposer(
+              $db: $db,
+              $table: $db.themes,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ProductThemesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ProductThemesTable> {
+  $$ProductThemesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  $$ProductsTableAnnotationComposer get productId {
+    final $$ProductsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.productId,
+        referencedTable: $db.products,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.products,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$ThemesTableAnnotationComposer get themeId {
+    final $$ThemesTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.themeId,
+        referencedTable: $db.themes,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ThemesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.themes,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ProductThemesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ProductThemesTable,
+    ProductTheme,
+    $$ProductThemesTableFilterComposer,
+    $$ProductThemesTableOrderingComposer,
+    $$ProductThemesTableAnnotationComposer,
+    $$ProductThemesTableCreateCompanionBuilder,
+    $$ProductThemesTableUpdateCompanionBuilder,
+    (ProductTheme, $$ProductThemesTableReferences),
+    ProductTheme,
+    PrefetchHooks Function({bool productId, bool themeId})> {
+  $$ProductThemesTableTableManager(_$AppDatabase db, $ProductThemesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ProductThemesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ProductThemesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ProductThemesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> productId = const Value.absent(),
+            Value<int> themeId = const Value.absent(),
+          }) =>
+              ProductThemesCompanion(
+            id: id,
+            productId: productId,
+            themeId: themeId,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int productId,
+            required int themeId,
+          }) =>
+              ProductThemesCompanion.insert(
+            id: id,
+            productId: productId,
+            themeId: themeId,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$ProductThemesTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({productId = false, themeId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (productId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.productId,
+                    referencedTable:
+                        $$ProductThemesTableReferences._productIdTable(db),
+                    referencedColumn:
+                        $$ProductThemesTableReferences._productIdTable(db).id,
+                  ) as T;
+                }
+                if (themeId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.themeId,
+                    referencedTable:
+                        $$ProductThemesTableReferences._themeIdTable(db),
+                    referencedColumn:
+                        $$ProductThemesTableReferences._themeIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$ProductThemesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $ProductThemesTable,
+    ProductTheme,
+    $$ProductThemesTableFilterComposer,
+    $$ProductThemesTableOrderingComposer,
+    $$ProductThemesTableAnnotationComposer,
+    $$ProductThemesTableCreateCompanionBuilder,
+    $$ProductThemesTableUpdateCompanionBuilder,
+    (ProductTheme, $$ProductThemesTableReferences),
+    ProductTheme,
+    PrefetchHooks Function({bool productId, bool themeId})>;
+typedef $$ProductSellersTableCreateCompanionBuilder = ProductSellersCompanion
+    Function({
+  Value<int> id,
+  required int productId,
+  required int sellerId,
+});
+typedef $$ProductSellersTableUpdateCompanionBuilder = ProductSellersCompanion
+    Function({
+  Value<int> id,
+  Value<int> productId,
+  Value<int> sellerId,
+});
+
+final class $$ProductSellersTableReferences
+    extends BaseReferences<_$AppDatabase, $ProductSellersTable, ProductSeller> {
+  $$ProductSellersTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProductsTable _productIdTable(_$AppDatabase db) =>
+      db.products.createAlias(
+          $_aliasNameGenerator(db.productSellers.productId, db.products.id));
+
+  $$ProductsTableProcessedTableManager get productId {
+    final manager = $$ProductsTableTableManager($_db, $_db.products)
+        .filter((f) => f.id($_item.productId));
+    final item = $_typedResult.readTableOrNull(_productIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $SellersTable _sellerIdTable(_$AppDatabase db) =>
+      db.sellers.createAlias(
+          $_aliasNameGenerator(db.productSellers.sellerId, db.sellers.id));
+
+  $$SellersTableProcessedTableManager get sellerId {
+    final manager = $$SellersTableTableManager($_db, $_db.sellers)
+        .filter((f) => f.id($_item.sellerId));
+    final item = $_typedResult.readTableOrNull(_sellerIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$ProductSellersTableFilterComposer
+    extends Composer<_$AppDatabase, $ProductSellersTable> {
+  $$ProductSellersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  $$ProductsTableFilterComposer get productId {
+    final $$ProductsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.productId,
+        referencedTable: $db.products,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductsTableFilterComposer(
+              $db: $db,
+              $table: $db.products,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$SellersTableFilterComposer get sellerId {
+    final $$SellersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.sellerId,
+        referencedTable: $db.sellers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SellersTableFilterComposer(
+              $db: $db,
+              $table: $db.sellers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ProductSellersTableOrderingComposer
+    extends Composer<_$AppDatabase, $ProductSellersTable> {
+  $$ProductSellersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  $$ProductsTableOrderingComposer get productId {
+    final $$ProductsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.productId,
+        referencedTable: $db.products,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductsTableOrderingComposer(
+              $db: $db,
+              $table: $db.products,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$SellersTableOrderingComposer get sellerId {
+    final $$SellersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.sellerId,
+        referencedTable: $db.sellers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SellersTableOrderingComposer(
+              $db: $db,
+              $table: $db.sellers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ProductSellersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ProductSellersTable> {
+  $$ProductSellersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  $$ProductsTableAnnotationComposer get productId {
+    final $$ProductsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.productId,
+        referencedTable: $db.products,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.products,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$SellersTableAnnotationComposer get sellerId {
+    final $$SellersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.sellerId,
+        referencedTable: $db.sellers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SellersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.sellers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ProductSellersTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ProductSellersTable,
+    ProductSeller,
+    $$ProductSellersTableFilterComposer,
+    $$ProductSellersTableOrderingComposer,
+    $$ProductSellersTableAnnotationComposer,
+    $$ProductSellersTableCreateCompanionBuilder,
+    $$ProductSellersTableUpdateCompanionBuilder,
+    (ProductSeller, $$ProductSellersTableReferences),
+    ProductSeller,
+    PrefetchHooks Function({bool productId, bool sellerId})> {
+  $$ProductSellersTableTableManager(
+      _$AppDatabase db, $ProductSellersTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ProductSellersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ProductSellersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ProductSellersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> productId = const Value.absent(),
+            Value<int> sellerId = const Value.absent(),
+          }) =>
+              ProductSellersCompanion(
+            id: id,
+            productId: productId,
+            sellerId: sellerId,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int productId,
+            required int sellerId,
+          }) =>
+              ProductSellersCompanion.insert(
+            id: id,
+            productId: productId,
+            sellerId: sellerId,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$ProductSellersTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({productId = false, sellerId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (productId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.productId,
+                    referencedTable:
+                        $$ProductSellersTableReferences._productIdTable(db),
+                    referencedColumn:
+                        $$ProductSellersTableReferences._productIdTable(db).id,
+                  ) as T;
+                }
+                if (sellerId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.sellerId,
+                    referencedTable:
+                        $$ProductSellersTableReferences._sellerIdTable(db),
+                    referencedColumn:
+                        $$ProductSellersTableReferences._sellerIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$ProductSellersTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $ProductSellersTable,
+    ProductSeller,
+    $$ProductSellersTableFilterComposer,
+    $$ProductSellersTableOrderingComposer,
+    $$ProductSellersTableAnnotationComposer,
+    $$ProductSellersTableCreateCompanionBuilder,
+    $$ProductSellersTableUpdateCompanionBuilder,
+    (ProductSeller, $$ProductSellersTableReferences),
+    ProductSeller,
+    PrefetchHooks Function({bool productId, bool sellerId})>;
+typedef $$ProductCategoriesTableCreateCompanionBuilder
+    = ProductCategoriesCompanion Function({
+  Value<int> id,
+  required int productId,
+  required int categoryId,
+});
+typedef $$ProductCategoriesTableUpdateCompanionBuilder
+    = ProductCategoriesCompanion Function({
+  Value<int> id,
+  Value<int> productId,
+  Value<int> categoryId,
+});
+
+final class $$ProductCategoriesTableReferences extends BaseReferences<
+    _$AppDatabase, $ProductCategoriesTable, ProductCategory> {
+  $$ProductCategoriesTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProductsTable _productIdTable(_$AppDatabase db) =>
+      db.products.createAlias(
+          $_aliasNameGenerator(db.productCategories.productId, db.products.id));
+
+  $$ProductsTableProcessedTableManager get productId {
+    final manager = $$ProductsTableTableManager($_db, $_db.products)
+        .filter((f) => f.id($_item.productId));
+    final item = $_typedResult.readTableOrNull(_productIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $CategoriesTable _categoryIdTable(_$AppDatabase db) =>
+      db.categories.createAlias($_aliasNameGenerator(
+          db.productCategories.categoryId, db.categories.id));
+
+  $$CategoriesTableProcessedTableManager get categoryId {
+    final manager = $$CategoriesTableTableManager($_db, $_db.categories)
+        .filter((f) => f.id($_item.categoryId));
+    final item = $_typedResult.readTableOrNull(_categoryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$ProductCategoriesTableFilterComposer
+    extends Composer<_$AppDatabase, $ProductCategoriesTable> {
+  $$ProductCategoriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  $$ProductsTableFilterComposer get productId {
+    final $$ProductsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.productId,
+        referencedTable: $db.products,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductsTableFilterComposer(
+              $db: $db,
+              $table: $db.products,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$CategoriesTableFilterComposer get categoryId {
+    final $$CategoriesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.categoryId,
+        referencedTable: $db.categories,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CategoriesTableFilterComposer(
+              $db: $db,
+              $table: $db.categories,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ProductCategoriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ProductCategoriesTable> {
+  $$ProductCategoriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  $$ProductsTableOrderingComposer get productId {
+    final $$ProductsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.productId,
+        referencedTable: $db.products,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductsTableOrderingComposer(
+              $db: $db,
+              $table: $db.products,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$CategoriesTableOrderingComposer get categoryId {
+    final $$CategoriesTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.categoryId,
+        referencedTable: $db.categories,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CategoriesTableOrderingComposer(
+              $db: $db,
+              $table: $db.categories,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ProductCategoriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ProductCategoriesTable> {
+  $$ProductCategoriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  $$ProductsTableAnnotationComposer get productId {
+    final $$ProductsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.productId,
+        referencedTable: $db.products,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProductsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.products,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$CategoriesTableAnnotationComposer get categoryId {
+    final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.categoryId,
+        referencedTable: $db.categories,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$CategoriesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.categories,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$ProductCategoriesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ProductCategoriesTable,
+    ProductCategory,
+    $$ProductCategoriesTableFilterComposer,
+    $$ProductCategoriesTableOrderingComposer,
+    $$ProductCategoriesTableAnnotationComposer,
+    $$ProductCategoriesTableCreateCompanionBuilder,
+    $$ProductCategoriesTableUpdateCompanionBuilder,
+    (ProductCategory, $$ProductCategoriesTableReferences),
+    ProductCategory,
+    PrefetchHooks Function({bool productId, bool categoryId})> {
+  $$ProductCategoriesTableTableManager(
+      _$AppDatabase db, $ProductCategoriesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ProductCategoriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ProductCategoriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ProductCategoriesTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> productId = const Value.absent(),
+            Value<int> categoryId = const Value.absent(),
+          }) =>
+              ProductCategoriesCompanion(
+            id: id,
+            productId: productId,
+            categoryId: categoryId,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int productId,
+            required int categoryId,
+          }) =>
+              ProductCategoriesCompanion.insert(
+            id: id,
+            productId: productId,
+            categoryId: categoryId,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$ProductCategoriesTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({productId = false, categoryId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (productId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.productId,
+                    referencedTable:
+                        $$ProductCategoriesTableReferences._productIdTable(db),
+                    referencedColumn: $$ProductCategoriesTableReferences
+                        ._productIdTable(db)
+                        .id,
+                  ) as T;
+                }
+                if (categoryId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.categoryId,
+                    referencedTable:
+                        $$ProductCategoriesTableReferences._categoryIdTable(db),
+                    referencedColumn: $$ProductCategoriesTableReferences
+                        ._categoryIdTable(db)
+                        .id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$ProductCategoriesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $ProductCategoriesTable,
+    ProductCategory,
+    $$ProductCategoriesTableFilterComposer,
+    $$ProductCategoriesTableOrderingComposer,
+    $$ProductCategoriesTableAnnotationComposer,
+    $$ProductCategoriesTableCreateCompanionBuilder,
+    $$ProductCategoriesTableUpdateCompanionBuilder,
+    (ProductCategory, $$ProductCategoriesTableReferences),
+    ProductCategory,
+    PrefetchHooks Function({bool productId, bool categoryId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1335,4 +4466,16 @@ class $AppDatabaseManager {
       $$ProductsTableTableManager(_db, _db.products);
   $$ProductImagesTableTableManager get productImages =>
       $$ProductImagesTableTableManager(_db, _db.productImages);
+  $$ThemesTableTableManager get themes =>
+      $$ThemesTableTableManager(_db, _db.themes);
+  $$SellersTableTableManager get sellers =>
+      $$SellersTableTableManager(_db, _db.sellers);
+  $$CategoriesTableTableManager get categories =>
+      $$CategoriesTableTableManager(_db, _db.categories);
+  $$ProductThemesTableTableManager get productThemes =>
+      $$ProductThemesTableTableManager(_db, _db.productThemes);
+  $$ProductSellersTableTableManager get productSellers =>
+      $$ProductSellersTableTableManager(_db, _db.productSellers);
+  $$ProductCategoriesTableTableManager get productCategories =>
+      $$ProductCategoriesTableTableManager(_db, _db.productCategories);
 }

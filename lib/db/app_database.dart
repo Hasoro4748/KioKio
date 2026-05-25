@@ -10,30 +10,36 @@ import 'package:path_provider/path_provider.dart';
 
 import 'tables/products.dart';
 import 'tables/product_images.dart';
+import 'tables/categories.dart';
+import 'tables/sellers.dart';
+import 'tables/themes.dart';
+import 'tables/product_categories.dart';
+import 'tables/product_sellers.dart';
+import 'tables/product_themes.dart';
+
 part 'app_database.g.dart';
 
 @DriftDatabase(
   tables: [
     Products,
     ProductImages,
+    Themes,
+    Sellers,
+    Categories,
+    ProductThemes,
+    ProductSellers,
+    ProductCategories,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 1;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (Migrator m) async {
-          await m.createAll();
-        },
-        onUpgrade: (Migrator m, int from, int to) async {
-          if (from < 2) {
-            await m.createTable(productImages);
-          }
-        },
+        onCreate: (m) async => m.createAll(),
       );
 
   Future<void> seedProducts() async {
@@ -50,40 +56,38 @@ class AppDatabase extends _$AppDatabase {
 
     await transaction(() async {
       for (final item in jsonList) {
-        /// 1. 상품 저장
         final productId = await into(products).insert(
           ProductsCompanion.insert(
             name: item['name'],
-            theme: item['theme'],
-            seller: item['seller'],
-            categoryGroup: item['categoryGroup'],
             basePrice: item['basePrice'],
             description: item['description'],
             stock: Value(item['stock']),
             isAvailable: Value(item['isAvailable']),
-            createdAt: DateTime.parse(
-              item['createdAt'],
-            ),
-            updatedAt: DateTime.parse(
-              item['updatedAt'],
-            ),
+            createdAt: DateTime.parse(item['createdAt']),
+            updatedAt: DateTime.parse(item['updatedAt']),
           ),
         );
 
-        /// 2. 이미지 저장
-        final List<dynamic> images = item['images'] ?? [];
+        /// images
+        final images = item['images'] as List<dynamic>? ?? [];
 
-        for (int i = 0; i < images.length; i++) {
-          await into(productImages).insert(
-            ProductImagesCompanion.insert(
-              productId: productId,
-              imagePath: images[i],
-              sortOrder: Value(i),
-              isThumbnail: Value(i == 0),
-              createdAt: DateTime.now(),
-            ),
+        await batch((batch) {
+          batch.insertAll(
+            productImages,
+            images.asMap().entries.map((e) {
+              return ProductImagesCompanion.insert(
+                productId: productId,
+                imagePath: e.value,
+                sortOrder: Value(e.key),
+                isThumbnail: Value(e.key == 0),
+                createdAt: DateTime.now(),
+              );
+            }).toList(),
           );
-        }
+        });
+
+        /// TODO: relation tables
+        // theme / seller / category
       }
     });
   }

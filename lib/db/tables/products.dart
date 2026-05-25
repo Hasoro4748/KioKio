@@ -6,11 +6,11 @@ class Products extends Table {
   TextColumn get name => text()();
 
   /// JSON 문자열 저장
-  TextColumn get theme => text()();
-
-  TextColumn get seller => text()();
-
-  TextColumn get categoryGroup => text()();
+  // TextColumn get theme => text()();
+  //
+  // TextColumn get seller => text()();
+  //
+  // TextColumn get categoryGroup => text()();
 
   IntColumn get basePrice => integer()();
 

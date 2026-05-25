@@ -9,7 +9,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   SystemChrome.setEnabledSystemUIMode(
-    SystemUiMode.immersiveSticky, // 👈 핵심
+    SystemUiMode.immersiveSticky,
   );
 
   final db = AppDatabase();

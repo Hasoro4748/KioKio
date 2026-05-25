@@ -1,20 +1,25 @@
 import 'package:drift/drift.dart';
+
 import 'package:kiosk/db/app_database.dart';
+import 'package:kiosk/models/product_image_model.dart';
 import 'package:kiosk/models/product_model.dart';
 
 class ProductMapper {
   static ProductModel toModel({
     required Product product,
-    required List<ProductImage> images,
+    required List<ProductImageModel> images,
+    required List<String> themes,
+    required List<String> sellers,
+    required List<String> categories,
   }) {
     return ProductModel(
       id: product.id,
       name: product.name,
-      theme: product.theme,
-      seller: product.seller,
-      categoryGroup: product.categoryGroup,
+      themes: themes,
+      sellers: sellers,
+      categories: categories,
       basePrice: product.basePrice,
-      images: images.map((e) => e.imagePath).toList(),
+      images: images,
       description: product.description,
       stock: product.stock,
       isAvailable: product.isAvailable,
@@ -26,9 +31,6 @@ class ProductMapper {
   static ProductsCompanion toCompanion(ProductModel model) {
     return ProductsCompanion.insert(
       name: model.name,
-      theme: model.theme,
-      seller: model.seller,
-      categoryGroup: model.categoryGroup,
       basePrice: model.basePrice,
       description: model.description,
       stock: Value(model.stock),
