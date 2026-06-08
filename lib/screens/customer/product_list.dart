@@ -45,44 +45,35 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   }
 
   List<String> getThemes(List<ProductModel> products) {
-    final set = products.map((e) => e.theme).toSet().toList();
-
-    set.sort();
-
-    return set;
+    return products.expand((e) => e.themes).toSet().toList()..sort();
   }
 
   List<String> getCategoryGroups(List<ProductModel> products) {
     final filtered = products.where((p) {
-      final themeOk = selectedTheme == null || p.theme == selectedTheme;
+      final themeOk = selectedTheme == null || p.themes.contains(selectedTheme);
 
-      final sellerOk = selectedSeller == null || p.seller == selectedSeller;
+      final sellerOk =
+          selectedSeller == null || p.sellers.contains(selectedSeller);
 
       return themeOk && sellerOk;
     });
 
-    final set = filtered.map((e) => e.categoryGroup).toSet().toList();
-
-    set.sort();
-
-    return set;
+    return filtered.expand((e) => e.categories).toSet().toList()..sort();
   }
 
   List<String> getSellers(List<ProductModel> products) {
-    final set = products.map((e) => e.seller).toSet().toList();
-
-    set.sort();
-
-    return set;
+    return products.expand((e) => e.sellers).toSet().toList();
   }
 
   List<ProductModel> getFilteredProducts(List<ProductModel> products) {
     return products.where((p) {
-      final themeOk = selectedTheme == null || p.theme == selectedTheme;
+      final themeOk = selectedTheme == null || p.themes.contains(selectedTheme);
 
-      final cateOk = selectedCate == null || p.categoryGroup == selectedCate;
+      final cateOk =
+          selectedCate == null || p.categories.contains(selectedCate);
 
-      final sellerOk = selectedSeller == null || p.seller == selectedSeller;
+      final sellerOk =
+          selectedSeller == null || p.sellers.contains(selectedSeller);
 
       return themeOk && cateOk && sellerOk;
     }).toList();
@@ -93,11 +84,12 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     String sellerName,
   ) {
     return products.any((p) {
-      final themeOk = selectedTheme == null || p.theme == selectedTheme;
+      final themeOk = selectedTheme == null || p.themes.contains(selectedTheme);
 
-      final cateOk = selectedCate == null || p.categoryGroup == selectedCate;
+      final cateOk =
+          selectedCate == null || p.categories.contains(selectedCate);
 
-      final sellerOk = p.seller == sellerName;
+      final sellerOk = p.sellers.contains(sellerName);
 
       return themeOk && sellerOk && cateOk;
     });
@@ -108,11 +100,13 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     String themeName,
   ) {
     return products.any((p) {
-      final sellerOk = selectedSeller == null || p.seller == selectedSeller;
+      final sellerOk =
+          selectedSeller == null || p.sellers.contains(selectedSeller);
 
-      final cateOk = selectedCate == null || p.categoryGroup == selectedCate;
+      final cateOk =
+          selectedCate == null || p.categories.contains(selectedCate);
 
-      final themeOk = p.theme == themeName;
+      final themeOk = p.themes.contains(themeName);
 
       return themeOk && sellerOk && cateOk;
     });

@@ -1,4 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kiosk/db/dao/filter_dao.dart';
+import 'package:kiosk/db/dao/image_dao.dart';
+import 'package:kiosk/db/dao/product_dao.dart';
+import 'package:kiosk/db/dao/relation_dao.dart';
 import 'package:kiosk/db/repositories/product_repository.dart';
 import 'package:kiosk/models/product_model.dart';
 
@@ -9,7 +13,11 @@ final productProvider =
   final db = ref.watch(databaseProvider);
 
   return ProductNotifier(
-    ProductRepository(db),
+    ProductRepository(
+        productDao: ProductDao(db),
+        imageDao: ImageDao(db),
+        filterDao: FilterDao(db),
+        relationDao: RelationDao(db)),
   );
 });
 
@@ -23,21 +31,21 @@ class ProductNotifier extends StateNotifier<List<ProductModel>> {
     state = await repository.getProducts();
   }
 
-  Future<void> addProduct(ProductModel product) async {
-    await repository.addProduct(product);
-
-    await loadProducts();
-  }
-
-  Future<void> updateProduct(ProductModel product) async {
-    await repository.updateProduct(product);
-
-    await loadProducts();
-  }
-
-  Future<void> deleteProduct(int id) async {
-    await repository.deleteProduct(id);
-
-    await loadProducts();
-  }
+  // Future<void> addProduct(ProductModel product) async {
+  //   await repository.addProduct(product);
+  //
+  //   await loadProducts();
+  // }
+  //
+  // Future<void> updateProduct(ProductModel product) async {
+  //   await repository.updateProduct(product);
+  //
+  //   await loadProducts();
+  // }
+  //
+  // Future<void> deleteProduct(int id) async {
+  //   await repository.deleteProduct(id);
+  //
+  //   await loadProducts();
+  // }
 }

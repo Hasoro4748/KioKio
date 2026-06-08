@@ -267,19 +267,19 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
                 _buildInfoText(
                   rs,
                   '장르',
-                  product.theme,
+                  product.themes.toString(),
                 ),
 
                 _buildInfoText(
                   rs,
                   '종류',
-                  product.categoryGroup,
+                  product.categories.toString(),
                 ),
 
                 _buildInfoText(
                   rs,
                   '판매자',
-                  product.seller,
+                  product.sellers.toString(),
                 ),
 
                 SizedBox(
