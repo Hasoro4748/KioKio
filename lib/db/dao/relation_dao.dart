@@ -17,7 +17,6 @@ class RelationDao {
       ..where(db.productThemes.productId.equals(productId));
 
     final rows = await query.get();
-
     return rows.map((e) => e.readTable(db.themes).name).toList();
   }
 

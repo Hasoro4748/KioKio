@@ -86,16 +86,99 @@ class AppDatabase extends _$AppDatabase {
           );
         });
 
-        /// TODO: relation tables
-        // theme / seller / category
+        //themes
+        final themesJson = item['themes'] as List<dynamic>? ?? [];
+        for (final themeName in themesJson) {
+          final existingTheme = await (select(themes)
+                ..where((t) => t.name.equals(themeName)))
+              .getSingleOrNull();
+
+          //중복 체크
+          final themeId = existingTheme?.id ??
+              await into(themes).insert(
+                ThemesCompanion.insert(name: themeName, imagePath: "null"),
+              );
+
+          await into(productThemes).insert(
+            ProductThemesCompanion.insert(
+                productId: productId, themeId: themeId),
+          );
+        }
+
+        //sellers
+        final sellersJson = item['sellers'] as List<dynamic>? ?? [];
+        for (final sellerName in sellersJson) {
+          final existingSeller = await (select(sellers)
+                ..where((s) => s.name.equals(sellerName)))
+              .getSingleOrNull();
+
+          final sellerId = existingSeller?.id ??
+              await into(sellers).insert(
+                SellersCompanion.insert(
+                  name: sellerName,
+                ),
+              );
+
+          await into(productSellers).insert(
+            ProductSellersCompanion.insert(
+              productId: productId,
+              sellerId: sellerId,
+            ),
+          );
+        }
+
+        //categories
+        final categoriesJson = item['categories'] as List<dynamic>? ?? [];
+        for (final categoryName in categoriesJson) {
+          final existingCategory = await (select(categories)
+                ..where((c) => c.name.equals(categoryName)))
+              .getSingleOrNull();
+
+          final categoryId = existingCategory?.id ??
+              await into(categories).insert(
+                CategoriesCompanion.insert(
+                  name: categoryName,
+                ),
+              );
+
+          await into(productCategories).insert(
+            ProductCategoriesCompanion.insert(
+              productId: productId,
+              categoryId: categoryId,
+            ),
+          );
+        }
       }
     });
   }
 
   Future<void> resetProducts() async {
+    await delete(productThemes).go();
+    await delete(productSellers).go();
+    await delete(productCategories).go();
+
+    await delete(productImages).go();
+
+    await delete(themes).go();
+    await delete(sellers).go();
+    await delete(categories).go();
+
     await delete(products).go();
 
     await seedProducts();
+
+    // //디버깅 용
+    // final themesList = await select(themes).get();
+    // final themesTmpList = await select(productThemes).get();
+    // print(themesList);
+    // print(themesTmpList);
+    //
+    // final sellerList = await select(categories).get();
+    // print(sellerList);
+    //
+    // final cateList = await select(sellers).get();
+    // print(cateList);
+    //삭제 요망
   }
 }
 

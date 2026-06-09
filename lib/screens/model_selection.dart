@@ -26,7 +26,6 @@ class ModelSelectionScreen extends StatelessWidget {
     // }
     final db = AppDatabase();
     db.resetProducts();
-
     print('데이터 초기화 완료');
   }
 

@@ -54,7 +54,7 @@ class OrderService {
   /// 주문 추가
   static Future<void> addOrder(Order order) async {
     final orders = await loadOrders();
-    print("주문삽입");
+    // print("주문삽입");
     orders.add(order);
 
     await saveOrders(orders);
