@@ -5,15 +5,14 @@ import 'package:kiosk/db/app_database.dart';
 import 'package:kiosk/screens/model_selection.dart';
 import 'package:kiosk/theme/common_theme.dart';
 
+final appDatabase = AppDatabase();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   SystemChrome.setEnabledSystemUIMode(
     SystemUiMode.immersiveSticky,
   );
-
-  final db = AppDatabase();
-  await db.seedProducts();
+  await appDatabase.seedProducts();
 
   runApp(
     const ProviderScope(

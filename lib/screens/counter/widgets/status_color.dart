@@ -27,3 +27,13 @@ Color statusBackgroundColor(String status) {
       return Colors.white;
   }
 }
+
+Color stockStateColor(int stock) {
+  if (stock <= 5) {
+    return Colors.red.shade600;
+  } else if (stock <= 15) {
+    return Colors.orange.shade600;
+  } else {
+    return Colors.black;
+  }
+}

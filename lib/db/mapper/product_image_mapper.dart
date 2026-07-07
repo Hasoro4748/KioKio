@@ -26,4 +26,17 @@ class ProductImageMapper {
       createdAt: Value(model.createdAt),
     );
   }
+
+  static ProductImagesCompanion toSaveCompanion(
+    ProductImageModel model,
+  ) {
+    return ProductImagesCompanion(
+      id: const Value.absent(),
+      productId: Value(model.productId),
+      imagePath: Value(model.imagePath),
+      sortOrder: Value(model.sortOrder),
+      isThumbnail: Value(model.isThumbnail),
+      createdAt: Value(model.createdAt),
+    );
+  }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kiosk/models/product_image_model.dart';
+import 'package:kiosk/utils/kiosk_helper.dart';
 import 'package:kiosk/utils/responsive.dart';
 
 class ProductImagesSlider extends StatefulWidget {
@@ -28,35 +29,34 @@ class _ProductImagesSliderState extends State<ProductImagesSlider> {
   @override
   Widget build(BuildContext context) {
     final rs = Responsive(context);
-
     return Stack(
       children: [
         /// 이미지 슬라이드
-        PageView.builder(
-          controller: _controller,
-          itemCount: widget.images.length,
-          onPageChanged: (index) {
-            setState(() {
-              currentIndex = index;
-            });
-          },
-          itemBuilder: (context, index) {
-            return ClipRRect(
-              borderRadius: BorderRadius.circular(
-                rs.radius(16),
+        widget.images.length == 0
+            ? KioskHelper.imageTypeBuilder('', BoxFit.cover)
+            : PageView.builder(
+                controller: _controller,
+                itemCount: widget.images.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    currentIndex = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(
+                      rs.radius(16),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(
+                        rs.padding(12),
+                      ),
+                      child: KioskHelper.imageTypeBuilder(
+                          widget.images[index].imagePath, BoxFit.contain),
+                    ),
+                  );
+                },
               ),
-              child: Padding(
-                padding: EdgeInsets.all(
-                  rs.padding(12),
-                ),
-                child: Image.asset(
-                  widget.images[index].imagePath,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            );
-          },
-        ),
 
         /// 이전 버튼
         if (currentIndex > 0)

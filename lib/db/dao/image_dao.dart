@@ -6,6 +6,7 @@ class ImageDao {
 
   ImageDao(this.db);
 
+  ///
   Future<List<ProductImage>> getByProductId(int productId) {
     return (db.select(db.productImages)
           ..where((i) => i.productId.equals(productId))
@@ -13,7 +14,11 @@ class ImageDao {
         .get();
   }
 
-  Future insertImages(int productId, List<String> paths) async {
+  Future<void> insert(ProductImagesCompanion comp) async {
+    await db.into(db.productImages).insert(comp);
+  }
+
+  Future<void> insertImages(int productId, List<String> paths) async {
     for (int i = 0; i < paths.length; i++) {
       await db.into(db.productImages).insert(ProductImagesCompanion.insert(
           productId: productId,
@@ -22,5 +27,15 @@ class ImageDao {
           isThumbnail: Value(i == 0),
           createdAt: DateTime.now()));
     }
+  }
+
+  Future<void> update(ProductImagesCompanion comp) async {
+    await db.update(db.productImages).replace(comp);
+  }
+
+  Future<void> deleteByProductId(int productId) async {
+    await (db.delete(db.productImages)
+          ..where((i) => i.productId.equals(productId)))
+        .go();
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kiosk/db/app_database.dart';
-import 'package:kiosk/models/order.dart';
+import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/models/product_model.dart';
 import 'package:kiosk/providers/product_providers.dart';
 import 'package:kiosk/theme/common_theme.dart';
@@ -9,7 +9,7 @@ import 'package:kiosk/utils/responsive.dart';
 import 'package:kiosk/utils/text_util.dart';
 
 class CartPanel extends ConsumerWidget {
-  final List<OrderItem> cart;
+  final List<OrderItemModel> cart;
 
   final int totalValue;
   final int totalPrice;
@@ -17,10 +17,10 @@ class CartPanel extends ConsumerWidget {
   final VoidCallback onClear;
   final VoidCallback onCheckout;
 
-  final Function(OrderItem item) onIncrease;
-  final Function(OrderItem item) onDecrease;
+  final Function(OrderItemModel item) onIncrease;
+  final Function(OrderItemModel item) onDecrease;
 
-  final int Function(List<ProductModel> products, int productId) getStock;
+  final int Function(int productId) getStock;
 
   const CartPanel({
     super.key,
@@ -37,7 +37,6 @@ class CartPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rs = Responsive(context);
-    final products = ref.watch(productProvider);
     return Container(
       padding: EdgeInsets.symmetric(
         vertical: rs.h(0.01),
@@ -153,12 +152,11 @@ class CartPanel extends ConsumerWidget {
 
                         /// 증가
                         IconButton(
-                          onPressed:
-                              item.quantity < getStock(products, item.productId)
-                                  ? () {
-                                      onIncrease(item);
-                                    }
-                                  : null,
+                          onPressed: item.quantity < getStock(item.productId)
+                              ? () {
+                                  onIncrease(item);
+                                }
+                              : null,
                           icon: Icon(
                             Icons.add_circle,
                             size: rs.font(26),

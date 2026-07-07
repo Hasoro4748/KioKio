@@ -8,8 +8,6 @@ class PosScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final products = ref.watch(productProvider);
-
     return const CustomerHomeScreen();
   }
 }

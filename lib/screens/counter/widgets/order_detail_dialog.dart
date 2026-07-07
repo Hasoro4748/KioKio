@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:kiosk/models/order.dart';
+import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/screens/counter/widgets/status_color.dart';
 import 'package:kiosk/utils/responsive.dart';
 import 'package:kiosk/utils/text_util.dart';
 
 class OrderDetailDialog extends ConsumerWidget {
-  final Order order;
+  final OrderModel order;
 
   final Responsive rs;
 
@@ -56,7 +56,7 @@ class OrderDetailDialog extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '주문번호: ${order.id}',
+                          '주문번호: ${DateFormat('MMdd -').format(order.createdAt)} ${order.id}',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

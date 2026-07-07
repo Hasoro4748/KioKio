@@ -6,16 +6,17 @@ import 'package:kiosk/db/dao/product_dao.dart';
 import 'package:kiosk/db/dao/relation_dao.dart';
 import 'package:kiosk/db/mapper/product_image_mapper.dart';
 import 'package:kiosk/db/mapper/product_mapper.dart';
-import 'package:kiosk/models/product_image_model.dart';
 import 'package:kiosk/models/product_model.dart';
 
 class ProductRepository {
+  final AppDatabase db;
   final ProductDao productDao;
   final ImageDao imageDao;
   final FilterDao filterDao;
   final RelationDao relationDao;
   ProductRepository(
-      {required this.productDao,
+      {required this.db,
+      required this.productDao,
       required this.imageDao,
       required this.filterDao,
       required this.relationDao});
@@ -82,88 +83,64 @@ class ProductRepository {
     );
   }
 
-  //
-  // /// 상품 추가
-  // Future<void> addProduct(ProductModel product) async {
-  //   await db.transaction(() async {
-  //     /// 1. 상품 저장
-  //     final productId = await db.into(db.products).insert(
-  //           ProductMapper.toCompanion(product),
-  //         );
-  //
-  //     /// 2. 이미지 저장
-  //     for (int i = 0; i < product.images.length; i++) {
-  //       final image = product.images[i];
-  //       await db.into(db.productImages).insert(
-  //             ProductImagesCompanion.insert(
-  //               productId: productId,
-  //               imagePath: image.imagePath,
-  //               sortOrder: Value(i),
-  //               isThumbnail: Value(i == 0),
-  //               createdAt: DateTime.now(),
-  //             ),
-  //           );
-  //     }
-  //   });
-  // }
-  //
-  // /// 상품 수정
-  // Future<bool> updateProduct(ProductModel product) async {
-  //   return await db.transaction(() async {
-  //     /// 1. 상품 수정
-  //     final updated = await db.update(db.products).replace(
-  //           Product(
-  //             id: product.id,
-  //             name: product.name,
-  //             theme: product.theme,
-  //             seller: product.seller,
-  //             categoryGroup: product.categoryGroup,
-  //             basePrice: product.basePrice,
-  //             description: product.description,
-  //             stock: product.stock,
-  //             isAvailable: product.isAvailable,
-  //             createdAt: product.createdAt,
-  //             updatedAt: DateTime.now(),
-  //           ),
-  //         );
-  //
-  //     /// 2. 기존 이미지 삭제
-  //     await (db.delete(db.productImages)
-  //           ..where((tbl) => tbl.productId.equals(product.id)))
-  //         .go();
-  //
-  //     /// 3. 새 이미지 저장
-  //     for (int i = 0; i < product.images.length; i++) {
-  //       final images = product.images[i];
-  //       await db.into(db.productImages).insert(
-  //             ProductImagesCompanion.insert(
-  //               productId: product.id,
-  //               imagePath: images.imagePath,
-  //               sortOrder: Value(i),
-  //               isThumbnail: Value(i == 0),
-  //               createdAt: DateTime.now(),
-  //             ),
-  //           );
-  //     }
-  //
-  //     return updated;
-  //   });
-  // }
-  //
-  // /// 상품 삭제
-  // Future<int> deleteProduct(int id) {
-  //   return (db.delete(db.products)..where((tbl) => tbl.id.equals(id))).go();
-  // }
-  //
-  // /// 재고 수정
-  // Future<void> updateStock({
-  //   required int id,
-  //   required int stock,
-  // }) async {
-  //   await (db.update(db.products)..where((tbl) => tbl.id.equals(id))).write(
-  //     ProductsCompanion(
-  //       stock: Value(stock),
-  //     ),
-  //   );
-  // }
+  Future<void> addProduct(ProductModel model) async {
+    await db.transaction(() async {
+      final productId =
+          await productDao.insert(ProductMapper.toCompanion(model));
+
+      for (var imageModel in model.images) {
+        await imageDao.insert(ProductImageMapper.toSaveCompanion(imageModel)
+            .copyWith(productId: Value(productId)));
+      }
+      await _updateRelations(productId, model);
+    });
+  }
+
+  Future<void> updateProduct(ProductModel model) async {
+    await db.transaction(() async {
+      final productId = model.id;
+
+      await productDao.updateProduct(ProductMapper.toCompanion(model));
+
+      for (var imageModel in model.images) {
+        await imageDao.update(ProductImageMapper.toCompanion(imageModel));
+      }
+      await relationDao.clearRelations(model.id!);
+      await _updateRelations(productId, model);
+    });
+  }
+
+  Future<void> deleteProduct(int productId) async {
+    // TODO 상품 삭제
+
+    await db.transaction(() async {
+      /// 이미지 삭제
+      await imageDao.deleteByProductId(productId);
+
+      /// 관계 제거
+      await relationDao.clearRelations(productId);
+
+      /// 상품 제거
+      await productDao.delete(productId);
+    });
+  }
+
+  Future<void> _updateRelations(int productId, ProductModel model) async {
+    // 테마 저장
+    for (var themeName in model.themes) {
+      final themeId = await filterDao.getOrCreateThemeIdByName(themeName);
+      await relationDao.insertProductTheme(productId, themeId);
+    }
+    // 판매자 저장
+    for (var sellerName in model.sellers) {
+      final sellerId = await filterDao.getOrCreateSellerIdByName(sellerName);
+      await relationDao.insertProductSeller(productId, sellerId);
+    }
+    // 카테고리 저장
+    for (var categoryName in model.categories) {
+      final categoryId =
+          await filterDao.getOrCreateCategoryIdByName(categoryName);
+      await relationDao.insertProductCategory(productId, categoryId);
+    }
+  }
 }

@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kiosk/db/app_database.dart';
 import 'package:kiosk/models/product_model.dart';
+import 'package:kiosk/utils/kiosk_helper.dart';
 import 'package:kiosk/utils/text_util.dart';
 
 class ProductCard extends StatelessWidget {
@@ -38,8 +41,9 @@ class ProductCard extends StatelessWidget {
                       borderRadius:
                           const BorderRadius.vertical(top: Radius.circular(16)),
                       image: DecorationImage(
-                        image: AssetImage(product.thumbnail),
-                        fit: BoxFit.contain,
+                        image: KioskHelper.getImageProvider(
+                            product.images.firstOrNull?.imagePath),
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),

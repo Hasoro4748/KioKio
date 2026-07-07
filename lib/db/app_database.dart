@@ -17,6 +17,9 @@ import 'tables/product_categories.dart';
 import 'tables/product_sellers.dart';
 import 'tables/product_themes.dart';
 
+import 'tables/orders.dart';
+import 'tables/order_items.dart';
+
 part 'app_database.g.dart';
 
 @DriftDatabase(
@@ -29,24 +32,41 @@ part 'app_database.g.dart';
     ProductThemes,
     ProductSellers,
     ProductCategories,
+    Orders,
+    OrderItems,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) async => m.createAll(),
-      );
+      onCreate: (m) async {
+        await m.createAll();
+      },
+      beforeOpen: (details) async {},
+      onUpgrade: (m, from, to) async {
+        if (from < 3) {
+          await m.createTable(orders);
+          await m.createTable(orderItems);
+        }
+      });
 
   Future<void> seedProducts() async {
     final existing = await select(products).get();
 
     /// 이미 데이터 있으면 종료
     if (existing.isNotEmpty) return;
+
+    /// 경로 확보
+    final appDir = await getApplicationDocumentsDirectory();
+    final imageDir = Directory(p.join(appDir.path, 'product_images'));
+    if (!await imageDir.exists()) {
+      await imageDir.create(recursive: true);
+    }
 
     final jsonString = await rootBundle.loadString(
       'assets/json/products_seed.json',
@@ -68,23 +88,37 @@ class AppDatabase extends _$AppDatabase {
           ),
         );
 
-        /// images
+        /// images 처리: Assets -> Local File System 복사
         final images = item['images'] as List<dynamic>? ?? [];
 
-        await batch((batch) {
-          batch.insertAll(
-            productImages,
-            images.asMap().entries.map((e) {
-              return ProductImagesCompanion.insert(
+        for (int i = 0; i < images.length; i++) {
+          final String assetPath = images[i];
+          final String fileName = p.basename(assetPath); // 파일명 추출
+          final String localPath = p.join(imageDir.path, fileName);
+          final File localFile = File(localPath);
+
+          // Asset 파일을 Byte로 읽어서 로컬 파일로 쓰기
+          try {
+            final ByteData data = await rootBundle.load(assetPath);
+            final List<int> bytes =
+                data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+            await localFile.writeAsBytes(bytes);
+
+            // DB에는 로컬 경로 저장
+            await into(productImages).insert(
+              ProductImagesCompanion.insert(
                 productId: productId,
-                imagePath: e.value,
-                sortOrder: Value(e.key),
-                isThumbnail: Value(e.key == 0),
+                imagePath: localPath, // 로컬 경로 저장
+                sortOrder: Value(i),
+                isThumbnail: Value(i == 0),
                 createdAt: DateTime.now(),
-              );
-            }).toList(),
-          );
-        });
+              ),
+            );
+          } catch (e) {
+            print("이미지 복사 실패 ($assetPath): $e");
+            // 실패 시 에셋 경로라도 저장하거나 스킵
+          }
+        }
 
         //themes
         final themesJson = item['themes'] as List<dynamic>? ?? [];
@@ -166,19 +200,6 @@ class AppDatabase extends _$AppDatabase {
     await delete(products).go();
 
     await seedProducts();
-
-    // //디버깅 용
-    // final themesList = await select(themes).get();
-    // final themesTmpList = await select(productThemes).get();
-    // print(themesList);
-    // print(themesTmpList);
-    //
-    // final sellerList = await select(categories).get();
-    // print(sellerList);
-    //
-    // final cateList = await select(sellers).get();
-    // print(cateList);
-    //삭제 요망
   }
 }
 

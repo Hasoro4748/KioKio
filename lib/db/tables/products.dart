@@ -5,13 +5,6 @@ class Products extends Table {
 
   TextColumn get name => text()();
 
-  /// JSON 문자열 저장
-  // TextColumn get theme => text()();
-  //
-  // TextColumn get seller => text()();
-  //
-  // TextColumn get categoryGroup => text()();
-
   IntColumn get basePrice => integer()();
 
   TextColumn get description => text()();
@@ -23,7 +16,4 @@ class Products extends Table {
   DateTimeColumn get createdAt => dateTime()();
 
   DateTimeColumn get updatedAt => dateTime()();
-
-  @override
-  Set<Column> get primaryKey => {id};
 }

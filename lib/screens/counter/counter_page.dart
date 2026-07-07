@@ -1,9 +1,7 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kiosk/models/order.dart';
+import 'package:intl/intl.dart';
+import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/providers/order_providers.dart';
 import 'package:kiosk/screens/counter/pages/order_history_screen.dart';
 import 'package:kiosk/screens/counter/pages/pos_screen.dart';
@@ -14,7 +12,6 @@ import 'package:kiosk/screens/model_selection.dart';
 import 'package:kiosk/theme/common_theme.dart';
 import 'package:kiosk/utils/responsive.dart';
 import 'package:kiosk/utils/text_util.dart';
-import 'package:path_provider/path_provider.dart';
 
 import 'pages/order_manage_screen.dart';
 
@@ -28,24 +25,35 @@ class CounterMainScreen extends ConsumerStatefulWidget {
 class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
   int currentIndex = 0;
 
-  final List<Widget> pages = [
-    const PosScreen(),
-    const OrderManageScreen(),
-    const OrderHistoryScreen(),
-    const ProductManageScreen(),
-    const SettingsScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final rs = Responsive(context);
-    final orders = ref.watch(orderProvider);
-    final pendingOrders = orders.where((o) => o.status == '처리중').toList();
+    final orderAsync = ref.watch(orderProvider);
+
+    final pendingOrders = orderAsync.when(
+      data: (orders) {
+        final list = orders.where((e) => e.status == '처리중').toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+        return list;
+      },
+      loading: () => <OrderModel>[],
+      error: (_, __) => <OrderModel>[],
+    );
 
     final width = MediaQuery.of(context).size.width;
 
     final isDesktop = width >= 900;
 
+    final pages = [
+      const PosScreen(),
+      const OrderManageScreen(),
+      const OrderHistoryScreen(),
+      const ProductManageScreen(),
+      const SettingsScreen(),
+    ];
+
+    final isPendingLoading = orderAsync.isLoading;
     return Scaffold(
       body: isDesktop
           ? Row(
@@ -160,21 +168,24 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
           pendingOrders,
           rs,
         ),
-        backgroundColor:
-            pendingOrders.isEmpty ? PageColors.themeSelect : Colors.orange,
+        backgroundColor: pendingOrders.isEmpty || isPendingLoading
+            ? PageColors.themeSelect
+            : Colors.orange,
         icon: const Icon(Icons.notifications_active),
-        label: Text(
-          '${pendingOrders.length} 건',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        label: isPendingLoading
+            ? const CircularProgressIndicator()
+            : Text(
+                '${pendingOrders.length} 건',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
   }
 
   void _showPendingOrders(
-    List<Order> pendingOrders,
+    List<OrderModel> pendingOrders,
     Responsive rs,
   ) {
     showModalBottomSheet(
@@ -246,7 +257,7 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
 
                                 /// 주문번호
                                 title: Text(
-                                  order.id,
+                                  '주문번호 : ${DateFormat('MMdd -').format(order.createdAt)} ${order.id.toString()}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -282,7 +293,7 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                                         onDelete: () async {
                                           await ref
                                               .read(orderProvider.notifier)
-                                              .deleteOrder(order.id);
+                                              .deleteOrder(order.id!);
 
                                           if (mounted) {
                                             Navigator.of(dialogContext).pop();
@@ -291,7 +302,7 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                                         onCancel: () async {
                                           await ref
                                               .read(orderProvider.notifier)
-                                              .cancelOrder(order.id);
+                                              .cancelOrder(order.id!);
 
                                           if (mounted) {
                                             Navigator.of(dialogContext).pop();
@@ -300,7 +311,7 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                                         onApprove: () async {
                                           await ref
                                               .read(orderProvider.notifier)
-                                              .approveOrder(order.id);
+                                              .approveOrder(order.id!);
 
                                           if (mounted) {
                                             Navigator.of(dialogContext).pop();

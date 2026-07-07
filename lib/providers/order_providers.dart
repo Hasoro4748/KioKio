@@ -1,66 +1,47 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kiosk/models/order.dart';
+import 'package:kiosk/models/order_model.dart';
+import 'package:kiosk/providers/order_service_provider.dart';
 import 'package:kiosk/sevices/order_service.dart';
 
-final orderProvider = NotifierProvider<OrderNotifier, List<Order>>(
+final orderProvider = AsyncNotifierProvider<OrderNotifier, List<OrderModel>>(
   OrderNotifier.new,
 );
 
-class OrderNotifier extends Notifier<List<Order>> {
+class OrderNotifier extends AsyncNotifier<List<OrderModel>> {
+  late final OrderService _service;
+
   @override
-  List<Order> build() {
-    loadOrders();
-    return [];
+  Future<List<OrderModel>> build() {
+    _service = ref.read(orderServiceProvider);
+
+    return _service.loadOrders();
   }
 
-  Future<void> loadOrders() async {
-    state = await OrderService.loadOrders();
+  Future<void> reload() async {
+    state = const AsyncLoading();
+
+    state = await AsyncValue.guard(
+      () => _service.loadOrders(),
+    );
   }
 
-  Future<void> approveOrder(String orderId) async {
-    state = [
-      for (final order in state)
-        if (order.id == orderId) order.copyWith(status: '승인') else order,
-    ];
-
-    await OrderService.saveOrders(state);
+  Future<void> approveOrder(int orderId) async {
+    await _service.updateOrderStatus(orderId: orderId, status: '승인');
+    await reload();
   }
 
-  Future<void> cancelOrder(String orderId) async {
-    state = [
-      for (final order in state)
-        if (order.id == orderId) order.copyWith(status: '취소') else order,
-    ];
-
-    await OrderService.saveOrders(state);
+  Future<void> cancelOrder(int orderId) async {
+    await _service.updateOrderStatus(orderId: orderId, status: '취소');
+    await reload();
   }
 
-  Future<void> deleteOrder(String orderId) async {
-    state = state.where((e) => e.id != orderId).toList();
-
-    await OrderService.saveOrders(state);
+  Future<void> deleteOrder(int orderId) async {
+    await _service.deleteOrder(orderId);
+    await reload();
   }
 
-  Future<void> addOrder(Order order) async {
-    state = [...state, order];
-
-    await OrderService.saveOrders(state);
-  }
-
-  Future<void> updateStatus(
-    String orderId,
-    String status,
-  ) async {
-    final updatedOrders = state.map((order) {
-      if (order.id == orderId) {
-        order.status = status;
-      }
-
-      return order;
-    }).toList();
-
-    state = updatedOrders;
-
-    await OrderService.saveOrders(state);
+  Future<void> addOrder(OrderModel order) async {
+    await _service.addOrder(order);
+    await reload();
   }
 }

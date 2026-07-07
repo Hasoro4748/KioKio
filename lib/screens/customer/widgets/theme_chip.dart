@@ -53,26 +53,29 @@ class ThemeChip extends StatelessWidget {
               color:
                   selected ? PageColors.themeSelect : PageColors.themeUnSelect,
             ),
-            child: Padding(
-              padding: EdgeInsets.all(
-                rs.padding(8),
-              ),
-              child: Center(
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: selected
-                        ? PageColors.cateSelect
-                        : PageColors.cateUnSelect,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            child: true
+                ? Image.asset('assets/img/theme/${label}.png')
+                : Padding(
+                    padding: EdgeInsets.all(
+                      rs.padding(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: selected
+                              ? PageColors.cateSelect
+                              : PageColors.cateUnSelect,
+                          fontWeight:
+                              selected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
           ),
         ),
       ),

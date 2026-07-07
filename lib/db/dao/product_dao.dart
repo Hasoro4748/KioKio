@@ -14,12 +14,12 @@ class ProductDao {
         .getSingleOrNull();
   }
 
-  Future<int> insert(ProductsCompanion data) {
-    return db.into(db.products).insert(data);
+  Future<int> insert(ProductsCompanion companion) {
+    return db.into(db.products).insert(companion);
   }
 
-  Future updateProduct(Product product) {
-    return db.update(db.products).replace(product);
+  Future updateProduct(ProductsCompanion companion) {
+    return db.update(db.products).replace(companion);
   }
 
   Future delete(int id) {

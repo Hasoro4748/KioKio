@@ -1,53 +1,59 @@
-class Order {
-  final String id;
-  final List<OrderItem> items;
+class OrderModel {
+  final int? id;
+  final List<OrderItemModel> items;
   final DateTime createdAt;
   String status; // 처리중, 승인, 취소
 
-  Order({
-    required this.id,
+  OrderModel({
+    this.id,
     required this.items,
     required this.createdAt,
     this.status = '처리중',
   });
 
   int get totalPrice => items.fold(0, (sum, item) => sum + item.totalPrice);
+  //
+  // Map<String, dynamic> toJson() => {
+  //       'id': id,
+  //       'items': items.map((e) => e.toJson()).toList(),
+  //       'createdAt': createdAt.toIso8601String(),
+  //       'status': status,
+  //     };
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'items': items.map((e) => e.toJson()).toList(),
-        'createdAt': createdAt.toIso8601String(),
-        'status': status,
-      };
-
-  factory Order.fromJson(Map<String, dynamic> json) {
-    return Order(
+  factory OrderModel.fromJson(Map<String, dynamic> json) {
+    return OrderModel(
       id: json['id'],
-      items: (json['items'] as List).map((e) => OrderItem.fromJson(e)).toList(),
+      items: (json['items'] as List)
+          .map((e) => OrderItemModel.fromJson(e))
+          .toList(),
       createdAt: DateTime.parse(json['createdAt']),
       status: json['status'] ?? '처리중',
     );
   }
 
-  Order copyWith({
+  OrderModel copyWith({
     String? status,
   }) {
-    return Order(
+    return OrderModel(
       id: id,
       items: items,
       createdAt: createdAt,
       status: status ?? this.status,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        // TODO JSON 변환
+      };
 }
 
-class OrderItem {
+class OrderItemModel {
   final int productId;
   final String name;
   final int basePrice;
   int quantity;
 
-  OrderItem({
+  OrderItemModel({
     required this.productId,
     required this.name,
     required this.basePrice,
@@ -65,8 +71,8 @@ class OrderItem {
         'quantity': quantity,
       };
 
-  factory OrderItem.fromJson(Map<String, dynamic> json) {
-    return OrderItem(
+  factory OrderItemModel.fromJson(Map<String, dynamic> json) {
+    return OrderItemModel(
       productId: json['productId'] ?? '',
       name: json['name'] ?? '알 수 없음',
       basePrice: json['basePrice'] ?? 0,

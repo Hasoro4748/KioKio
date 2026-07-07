@@ -12,18 +12,6 @@ class ModelSelectionScreen extends StatelessWidget {
   const ModelSelectionScreen({super.key});
 
   Future<void> resetAllData() async {
-    // final dir = await getApplicationDocumentsDirectory();
-    //
-    // final productFile = File('${dir.path}/files/products.json');
-    // final orderFile = File('${dir.path}/files/orders.json');
-    //
-    // if (await productFile.exists()) {
-    //   await productFile.delete();
-    // }
-    //
-    // if (await orderFile.exists()) {
-    //   await orderFile.delete();
-    // }
     final db = AppDatabase();
     db.resetProducts();
     print('데이터 초기화 완료');
@@ -77,6 +65,12 @@ class ModelSelectionScreen extends StatelessWidget {
                       await resetAllData();
                     },
                     child: Text('초기화'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await resetAllData();
+                    },
+                    child: Text('임의조정'),
                   )
                 ],
               ),

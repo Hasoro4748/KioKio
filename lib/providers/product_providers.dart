@@ -7,45 +7,42 @@ import 'package:kiosk/db/repositories/product_repository.dart';
 import 'package:kiosk/models/product_model.dart';
 
 import 'package:kiosk/providers/database_provider.dart';
+import 'package:kiosk/providers/product_service_provider.dart';
+import 'package:kiosk/sevices/product_service.dart';
 
 final productProvider =
-    StateNotifierProvider<ProductNotifier, List<ProductModel>>((ref) {
-  final db = ref.watch(databaseProvider);
+    AsyncNotifierProvider<ProductNotifier, List<ProductModel>>(
+  ProductNotifier.new,
+);
 
-  return ProductNotifier(
-    ProductRepository(
-        productDao: ProductDao(db),
-        imageDao: ImageDao(db),
-        filterDao: FilterDao(db),
-        relationDao: RelationDao(db)),
-  );
-});
+class ProductNotifier extends AsyncNotifier<List<ProductModel>> {
+  ProductService get _service => ref.read(productServiceProvider);
 
-class ProductNotifier extends StateNotifier<List<ProductModel>> {
-  final ProductRepository repository;
-  ProductNotifier(this.repository) : super([]) {
-    loadProducts();
+  @override
+  Future<List<ProductModel>> build() {
+    return _service.loadProducts();
   }
 
-  Future<void> loadProducts() async {
-    state = await repository.getProducts();
+  Future<void> reload() async {
+    state = const AsyncLoading();
+
+    state = await AsyncValue.guard(
+      () => _service.loadProducts(),
+    );
   }
 
-  // Future<void> addProduct(ProductModel product) async {
-  //   await repository.addProduct(product);
-  //
-  //   await loadProducts();
-  // }
-  //
-  // Future<void> updateProduct(ProductModel product) async {
-  //   await repository.updateProduct(product);
-  //
-  //   await loadProducts();
-  // }
-  //
-  // Future<void> deleteProduct(int id) async {
-  //   await repository.deleteProduct(id);
-  //
-  //   await loadProducts();
-  // }
+  Future<void> addProduct(ProductModel product) async {
+    await _service.addProduct(product);
+    await reload();
+  }
+
+  Future<void> updateProduct(ProductModel product) async {
+    await _service.updateProduct(product);
+    await reload();
+  }
+
+  Future<void> deleteProduct(int id) async {
+    await _service.deleteProduct(id);
+    await reload();
+  }
 }
