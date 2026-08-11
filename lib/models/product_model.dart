@@ -86,4 +86,36 @@ class ProductModel {
     return "assets/img/unit/no_image.png";
     ;
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'basePrice': basePrice,
+        'description': description,
+        'stock': stock,
+        'isAvailable': isAvailable,
+        'themes': themes,
+        'sellers': sellers,
+        'categories': categories,
+        'images': images.map((e) => e.toJson()).toList(), // 리스트 직렬화
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
+      };
+
+  factory ProductModel.fromJson(Map<String, dynamic> json) => ProductModel(
+        id: json['id'],
+        name: json['name'],
+        basePrice: json['basePrice'],
+        description: json['description'],
+        stock: json['stock'],
+        isAvailable: json['isAvailable'],
+        themes: List<String>.from(json['themes']),
+        sellers: List<String>.from(json['sellers']),
+        categories: List<String>.from(json['categories']),
+        images: (json['images'] as List)
+            .map((e) => ProductImageModel.fromJson(e))
+            .toList(),
+        createdAt: DateTime.parse(json['createdAt']),
+        updatedAt: DateTime.parse(json['updatedAt']),
+      );
 }

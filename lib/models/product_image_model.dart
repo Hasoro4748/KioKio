@@ -19,4 +19,22 @@ class ProductImageModel {
     required this.isThumbnail,
     required this.createdAt,
   });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'productId': productId,
+        'imagePath': imagePath,
+        'sortOrder': sortOrder,
+        'isThumbnail': isThumbnail,
+        'createdAt': createdAt.toIso8601String(),
+      };
+
+  factory ProductImageModel.fromJson(Map<String, dynamic> json) =>
+      ProductImageModel(
+          id: json['id'],
+          productId: json['productId'],
+          imagePath: json['imagePath'],
+          sortOrder: json['sortOrder'],
+          isThumbnail: json['isThumbnail'],
+          createdAt: DateTime.parse(json['createdAt']));
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/providers/order_providers.dart';
+import 'package:kiosk/providers/pos_network_service_provider.dart';
 import 'package:kiosk/screens/counter/pages/order_history_screen.dart';
 import 'package:kiosk/screens/counter/pages/pos_screen.dart';
 import 'package:kiosk/screens/counter/pages/product_manage_screen.dart';
@@ -10,6 +11,8 @@ import 'package:kiosk/screens/counter/pages/settings_screen.dart';
 import 'package:kiosk/screens/counter/widgets/order_detail_dialog.dart';
 import 'package:kiosk/screens/model_selection.dart';
 import 'package:kiosk/theme/common_theme.dart';
+import 'package:kiosk/utils/pos_network_service.dart';
+import 'package:kiosk/utils/pos_network_status.dart';
 import 'package:kiosk/utils/responsive.dart';
 import 'package:kiosk/utils/text_util.dart';
 
@@ -29,6 +32,10 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
   Widget build(BuildContext context) {
     final rs = Responsive(context);
     final orderAsync = ref.watch(orderProvider);
+    final networkState = ref.watch(posNetworkServiceProvider);
+    final isBroadcasting =
+        networkState.status == PosBroadcastStatus.broadcasting;
+    final connectedCount = networkState.connectedKiosks;
 
     final pendingOrders = orderAsync.when(
       data: (orders) {
@@ -95,6 +102,75 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                               label: Text('환경설정'),
                             ),
                           ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 24),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            IconButton(
+                              onPressed: () {
+                                ref
+                                    .read(posNetworkServiceProvider.notifier)
+                                    .startBroadcast();
+                              },
+                              icon: Icon(
+                                isBroadcasting
+                                    ? Icons.sensors
+                                    : Icons.sensors_off,
+                                color: isBroadcasting
+                                    ? (connectedCount > 0
+                                        ? Colors.blueAccent
+                                        : Colors.greenAccent)
+                                    : Colors.white,
+                                size: 36,
+                              ),
+                              tooltip: '서버 시작',
+                            ),
+                            if (connectedCount > 0)
+                              Positioned(
+                                right: 4,
+                                top: 4,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  constraints: const BoxConstraints(
+                                      minWidth: 20, minHeight: 20),
+                                  child: Text(
+                                    '$connectedCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 24),
+                        child: IconButton(
+                          onPressed: () {
+                            ref
+                                .read(posNetworkServiceProvider.notifier)
+                                .stopBroadcast();
+                          },
+                          icon: Icon(
+                            Icons.stop_circle_outlined,
+                            color: isBroadcasting
+                                ? Colors.redAccent
+                                : Colors.white54,
+                            size: 36,
+                          ),
+                          tooltip: '서버 중지',
                         ),
                       ),
 

@@ -85,12 +85,12 @@ class ProductRepository {
 
   Future<void> addProduct(ProductModel model) async {
     await db.transaction(() async {
-      final productId =
-          await productDao.insert(ProductMapper.toCompanion(model));
+      final productId = await productDao.insert(
+          ProductMapper.toCompanion(model).copyWith(id: const Value.absent()));
 
       for (var imageModel in model.images) {
         await imageDao.insert(ProductImageMapper.toSaveCompanion(imageModel)
-            .copyWith(productId: Value(productId)));
+            .copyWith(id: Value.absent(), productId: Value(productId)));
       }
       await _updateRelations(productId, model);
     });

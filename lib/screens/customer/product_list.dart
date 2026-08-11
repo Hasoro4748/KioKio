@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kiosk/db/app_database.dart';
 import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/models/product_model.dart';
+import 'package:kiosk/providers/kiosk_network_provider.dart';
 import 'package:kiosk/providers/order_providers.dart';
 import 'package:kiosk/providers/product_providers.dart';
 import 'package:kiosk/screens/customer/widgets/cart_panel.dart';
@@ -12,6 +13,8 @@ import 'package:kiosk/screens/customer/widgets/product_detail_dialog.dart';
 import 'package:kiosk/screens/customer/widgets/theme_chip.dart';
 import 'package:kiosk/screens/model_selection.dart';
 import 'package:kiosk/theme/common_theme.dart';
+import 'package:kiosk/utils/kiosk_network_discovery.dart';
+import 'package:kiosk/utils/kiosk_network_status.dart';
 import 'package:kiosk/utils/responsive.dart';
 import 'package:kiosk/utils/text_util.dart';
 import 'package:collection/collection.dart';
@@ -180,7 +183,19 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
       createdAt: DateTime.now(),
     );
     await ref.read(orderProvider.notifier).addOrder(order);
-
+    final bool isSent =
+        ref.read(kioskNetworkProvider.notifier).sendOrder(order);
+    ScaffoldMessenger.of(context).removeCurrentSnackBar();
+    if (isSent) {
+      _showOrderCompleteOverlay(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ POS 연결을 확인해주세요.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
     setState(() {
       cart.clear();
     });
@@ -193,11 +208,49 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
   }
 
+  void _showOrderCompleteOverlay(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 배경 클릭으로 닫기 방지
+      builder: (context) {
+        // 1.5초 뒤에 자동으로 닫힘
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (Navigator.canPop(context)) Navigator.pop(context);
+        });
+
+        return Center(
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: DefaultColors.green,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.check_circle, color: Colors.greenAccent, size: 80),
+                SizedBox(height: 16),
+                Text(
+                  "주문 전송 완료",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final rs = Responsive(context);
     final productsAsync = ref.watch(productProvider);
 
+    final networkStatus = ref.watch(kioskNetworkProvider);
     return productsAsync.when(
         loading: () => const Scaffold(
               body: Center(
@@ -287,6 +340,56 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                               ),
                             ],
                           ),
+                        ),
+                      ),
+                      Spacer(),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 24),
+                        child: IconButton(
+                          onPressed: () {
+                            ref
+                                .read(kioskNetworkProvider.notifier)
+                                .searchForPos();
+                          },
+                          icon: Icon(
+                            networkStatus == KioskStatus.connected
+                                ? Icons.check_circle
+                                : networkStatus == KioskStatus.searching
+                                    ? Icons.sync
+                                    : networkStatus == KioskStatus.error
+                                        ? Icons.error // 에러 아이콘 추가
+                                        : Icons.circle,
+                            color: networkStatus == KioskStatus.connected
+                                ? Colors.greenAccent
+                                : networkStatus == KioskStatus.searching
+                                    ? Colors.orangeAccent
+                                    : networkStatus == KioskStatus.error
+                                        ? Colors.redAccent // 에러 시 빨간색
+                                        : Colors.white,
+                            size: 36,
+                          ),
+                          tooltip: 'POS 탐색 및 연결',
+                        ),
+                      ),
+
+                      // 실시간 상태 반영 버튼 2: 중지 버튼
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 24),
+                        child: IconButton(
+                          onPressed: () {
+                            ref
+                                .read(kioskNetworkProvider.notifier)
+                                .stopDiscoveryService();
+                          },
+                          icon: Icon(
+                            Icons.stop_circle_outlined,
+                            color: (networkStatus == KioskStatus.connected ||
+                                    networkStatus == KioskStatus.searching)
+                                ? Colors.redAccent // 작동 중일 때 빨간색
+                                : Colors.white.withOpacity(0.3), // 대기 중일 때 흐리게
+                            size: 36,
+                          ),
+                          tooltip: '연결 종료',
                         ),
                       ),
                     ],
@@ -464,7 +567,9 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                                               );
                                                             }
                                                           });
-
+                                                          ScaffoldMessenger.of(
+                                                                  context)
+                                                              .removeCurrentSnackBar();
                                                           ScaffoldMessenger.of(
                                                             context,
                                                           ).showSnackBar(

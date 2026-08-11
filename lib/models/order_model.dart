@@ -12,13 +12,6 @@ class OrderModel {
   });
 
   int get totalPrice => items.fold(0, (sum, item) => sum + item.totalPrice);
-  //
-  // Map<String, dynamic> toJson() => {
-  //       'id': id,
-  //       'items': items.map((e) => e.toJson()).toList(),
-  //       'createdAt': createdAt.toIso8601String(),
-  //       'status': status,
-  //     };
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
@@ -43,7 +36,10 @@ class OrderModel {
   }
 
   Map<String, dynamic> toJson() => {
-        // TODO JSON 변환
+        'id': id,
+        'items': items.map((e) => e.toJson()).toList(),
+        'status': status,
+        'createdAt': createdAt.toIso8601String(),
       };
 }
 

@@ -30,7 +30,7 @@ class ProductMapper {
 
   static ProductsCompanion toCompanion(ProductModel model) {
     return ProductsCompanion.insert(
-      id: Value(model.id),
+      id: (model.id == 0) ? const Value.absent() : Value(model.id),
       name: model.name,
       basePrice: model.basePrice,
       description: model.description,
