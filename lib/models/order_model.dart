@@ -75,4 +75,12 @@ class OrderItemModel {
       quantity: json['quantity'] ?? 1,
     );
   }
+
+  OrderItemModel copyWith({required int quantity}) {
+    return OrderItemModel(
+        productId: productId,
+        name: name,
+        basePrice: basePrice,
+        quantity: quantity);
+  }
 }

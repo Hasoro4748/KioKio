@@ -4,8 +4,9 @@ import 'dart:convert';
 import 'package:flutter_nsd/flutter_nsd.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kiosk/models/order_model.dart';
-import 'package:kiosk/utils/kiosk_network_status.dart';
+import 'package:kiosk/network/kiosk_network_status.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/io.dart';
 
 class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
   KioskNetworkDiscovery() : super(KioskStatus.idle);
@@ -38,8 +39,7 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
   }
 
   Future<void> searchForPos() async {
-    if (state == KioskStatus.searching || state == KioskStatus.connected)
-      return;
+    if (state == KioskStatus.connected) return;
 
     print("pos 탐색 시작");
     state = KioskStatus.searching; // 상태 업데이트
@@ -57,17 +57,31 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
     print("Pos 접속 시도: $url");
 
     try {
-      _channel = WebSocketChannel.connect(Uri.parse(url));
-      state = KioskStatus.connected; // 연결 성공 상태 업데이트
+      _channel = IOWebSocketChannel.connect(Uri.parse(url),
+          pingInterval: const Duration(seconds: 5));
+
+      state = KioskStatus.connected; // 여기서 상태 변경
 
       _channel!.stream.listen(
         (message) {
+          final data = jsonDecode(message as String);
+          if (data['event'] == 'connection_confirmed') {
+            print("POS 연결 성공! 서버 ID: ${data['sid']}");
+            state = KioskStatus.connected;
+          }
           print("Pos 수신 : $message");
         },
         onDone: () {
           print("연결 종료됨");
-          state = KioskStatus.idle;
+          state = KioskStatus.searching;
           _channel = null;
+          Future.delayed(const Duration(seconds: 5), () {
+            // 사용자가 수동으로 멈춘 게 아니라면 재탐색 실행
+            if (state == KioskStatus.searching) {
+              print("자동 재탐색 시작...");
+              searchForPos();
+            }
+          });
         },
         onError: (e) {
           print("웹소켓 에러: $e");

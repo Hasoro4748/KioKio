@@ -8,6 +8,7 @@ import 'package:kiosk/screens/counter/pages/order_history_screen.dart';
 import 'package:kiosk/screens/counter/pages/pos_screen.dart';
 import 'package:kiosk/screens/counter/pages/product_manage_screen.dart';
 import 'package:kiosk/screens/counter/pages/settings_screen.dart';
+import 'package:kiosk/screens/counter/widgets/draggable_fab.dart';
 import 'package:kiosk/screens/counter/widgets/order_detail_dialog.dart';
 import 'package:kiosk/screens/model_selection.dart';
 import 'package:kiosk/theme/common_theme.dart';
@@ -52,6 +53,8 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
 
     final isDesktop = width >= 900;
 
+    final isPendingLoading = orderAsync.isLoading;
+
     final pages = [
       const PosScreen(),
       const OrderManageScreen(),
@@ -60,150 +63,199 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
       const SettingsScreen(),
     ];
 
-    final isPendingLoading = orderAsync.isLoading;
     return Scaffold(
-      body: isDesktop
-          ? Row(
-              children: [
-                Container(
-                  width: 100,
-                  color: PageColors.cateBack,
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: NavigationRail(
-                          backgroundColor: Colors.transparent,
-                          selectedIndex: currentIndex,
-                          onDestinationSelected: (index) {
-                            setState(() {
-                              currentIndex = index;
-                            });
-                          },
-                          labelType: NavigationRailLabelType.all,
-                          destinations: const [
-                            NavigationRailDestination(
-                              icon: Icon(Icons.point_of_sale),
-                              label: Text('POS'),
-                            ),
-                            NavigationRailDestination(
-                              icon: Icon(Icons.receipt_long),
-                              label: Text('주문관리'),
-                            ),
-                            NavigationRailDestination(
-                              icon: Icon(Icons.history),
-                              label: Text('주문기록'),
-                            ),
-                            NavigationRailDestination(
-                              icon: Icon(Icons.inventory_2_outlined),
-                              label: Text('상품관리'),
-                            ),
-                            NavigationRailDestination(
-                              icon: Icon(Icons.settings),
-                              label: Text('환경설정'),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 24),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                ref
-                                    .read(posNetworkServiceProvider.notifier)
-                                    .startBroadcast();
-                              },
-                              icon: Icon(
-                                isBroadcasting
-                                    ? Icons.sensors
-                                    : Icons.sensors_off,
-                                color: isBroadcasting
-                                    ? (connectedCount > 0
-                                        ? Colors.blueAccent
-                                        : Colors.greenAccent)
-                                    : Colors.white,
-                                size: 36,
-                              ),
-                              tooltip: '서버 시작',
-                            ),
-                            if (connectedCount > 0)
-                              Positioned(
-                                right: 4,
-                                top: 4,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  constraints: const BoxConstraints(
-                                      minWidth: 20, minHeight: 20),
-                                  child: Text(
-                                    '$connectedCount',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 24),
-                        child: IconButton(
-                          onPressed: () {
-                            ref
-                                .read(posNetworkServiceProvider.notifier)
-                                .stopBroadcast();
-                          },
-                          icon: Icon(
-                            Icons.stop_circle_outlined,
-                            color: isBroadcasting
-                                ? Colors.redAccent
-                                : Colors.white54,
-                            size: 36,
-                          ),
-                          tooltip: '서버 중지',
-                        ),
-                      ),
-
-                      /// 메인화면 버튼
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 24),
-                        child: IconButton(
-                          onPressed: () {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ModelSelectionScreen(),
-                              ),
-                              (route) => false,
-                            );
-                          },
-                          icon: const Icon(
-                            Icons.home_rounded,
-                            color: Colors.white,
-                            size: 36,
-                          ),
-                          tooltip: '메인화면',
-                        ),
-                      ),
-                    ],
+      appBar: isDesktop
+          ? null
+          : AppBar(
+              title: const Text('POS 모드'),
+              backgroundColor: PageColors.themeUnSelect,
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: IconButton(
+                    onPressed: () => _showPendingOrders(pendingOrders, rs),
+                    icon: Badge(
+                      label: Text('${pendingOrders.length}'),
+                      backgroundColor: Colors.orange,
+                      child: Icon(Icons.notifications_active,
+                          color: pendingOrders.isEmpty
+                              ? PageColors.textBlue
+                              : DefaultColors.yellow),
+                    ),
                   ),
                 ),
-                Expanded(
-                  child: pages[currentIndex],
+                // 1. 서버 시작/중지 토글 버튼 추가
+                IconButton(
+                  onPressed: () {
+                    if (isBroadcasting) {
+                      ref
+                          .read(posNetworkServiceProvider.notifier)
+                          .stopBroadcast();
+                    } else {
+                      ref
+                          .read(posNetworkServiceProvider.notifier)
+                          .startBroadcast();
+                    }
+                  },
+                  icon: Icon(
+                    isBroadcasting ? Icons.sensors : Icons.sensors_off,
+                    color: isBroadcasting
+                        ? (connectedCount > 0
+                            ? Colors.blueAccent
+                            : Colors.greenAccent)
+                        : Colors.white54,
+                  ),
+                  tooltip: isBroadcasting ? '서버 중지' : '서버 시작',
+                ),
+
+                // 2. 연결된 키오스크 숫자 표시 (배지 형태)
+                if (connectedCount > 0)
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '$connectedCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // 3. 메인화면으로 돌아가기 버튼 (모바일에서도 필요할 경우)
+                IconButton(
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ModelSelectionScreen(),
+                      ),
+                      (route) => false,
+                    );
+                  },
+                  icon: const Icon(Icons.home_rounded, color: Colors.white),
                 ),
               ],
-            )
-          : pages[currentIndex],
+            ),
+      body: Stack(
+        children: [
+          isDesktop
+              ? Row(
+                  children: [
+                    // --- 커스텀 사이드바 시작 ---
+                    Container(
+                      width: 110,
+                      decoration: BoxDecoration(
+                        // PageColors.cateBack을 배경으로 사용하여 전체 테마와 통일감 부여
+                        color: PageColors.cateBack,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(2, 0),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 40),
+                          // 로고 아이콘 색상을 테마의 짙은 남색으로 변경
+                          const Icon(Icons.storefront,
+                              color: PageColors.textBlue, size: 36),
+                          const SizedBox(height: 40),
+
+                          // 메뉴 리스트
+                          Expanded(
+                            child: Column(
+                              children: [
+                                _buildNavButton(0, Icons.point_of_sale, 'POS'),
+                                _buildNavButton(1, Icons.receipt_long, '주문관리'),
+                                _buildNavButton(2, Icons.history, '주문기록'),
+                                _buildNavButton(
+                                    3, Icons.inventory_2_outlined, '상품관리'),
+                                _buildNavButton(4, Icons.settings, '환경설정'),
+                              ],
+                            ),
+                          ),
+
+                          // 하단 시스템 제어 영역
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            decoration: BoxDecoration(
+                              // 하단 영역을 살짝 더 어두운 톤으로 구분
+                              color: PageColors.theme.withOpacity(0.3),
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(24)),
+                            ),
+                            child: Column(
+                              children: [
+                                _buildServerControl(
+                                    isBroadcasting, connectedCount),
+                                const SizedBox(height: 20),
+                                _buildSideIconButton(
+                                  icon: Icons.home_rounded,
+                                  // 기본 텍스트 블루 색상 활용
+                                  color: PageColors.textBlue.withOpacity(0.8),
+                                  tooltip: '메인화면',
+                                  onTap: () {
+                                    Navigator.pushAndRemoveUntil(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const ModelSelectionScreen()),
+                                      (route) => false,
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // --- 커스텀 사이드바 끝 ---
+
+                    Expanded(
+                      child: Container(
+                        // 메인 배경을 테마의 가장 밝은 색상으로 설정
+                        color: const Color(0xFFFCFDFF),
+                        child: pages[currentIndex],
+                      ),
+                    ),
+                  ],
+                )
+              : pages[currentIndex],
+          if (isDesktop)
+            DraggableFab(
+              initialPosition: Offset(MediaQuery.of(context).size.width - 120,
+                  MediaQuery.of(context).size.height - 150),
+              child: FloatingActionButton.extended(
+                onPressed: () => _showPendingOrders(pendingOrders, rs),
+                backgroundColor: pendingOrders.isEmpty || isPendingLoading
+                    ? PageColors.themeSelect
+                    : Colors.orange,
+                icon: const Icon(Icons.notifications_active),
+                label: isPendingLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : Text(
+                        '${pendingOrders.length} 건',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+              ),
+            ),
+        ],
+      ),
 
       //모바일 환경
       bottomNavigationBar: isDesktop
@@ -239,24 +291,24 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showPendingOrders(
-          pendingOrders,
-          rs,
-        ),
-        backgroundColor: pendingOrders.isEmpty || isPendingLoading
-            ? PageColors.themeSelect
-            : Colors.orange,
-        icon: const Icon(Icons.notifications_active),
-        label: isPendingLoading
-            ? const CircularProgressIndicator()
-            : Text(
-                '${pendingOrders.length} 건',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-      ),
+      // floatingActionButton: FloatingActionButton.extended(
+      //   onPressed: () => _showPendingOrders(
+      //     pendingOrders,
+      //     rs,
+      //   ),
+      //   backgroundColor: pendingOrders.isEmpty || isPendingLoading
+      //       ? PageColors.themeSelect
+      //       : Colors.orange,
+      //   icon: const Icon(Icons.notifications_active),
+      //   label: isPendingLoading
+      //       ? const CircularProgressIndicator()
+      //       : Text(
+      //           '${pendingOrders.length} 건',
+      //           style: const TextStyle(
+      //             fontWeight: FontWeight.bold,
+      //           ),
+      //         ),
+      // ),
     );
   }
 
@@ -369,7 +421,7 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                                         onDelete: () async {
                                           await ref
                                               .read(orderProvider.notifier)
-                                              .deleteOrder(order.id!);
+                                              .deleteOrder(order);
 
                                           if (mounted) {
                                             Navigator.of(dialogContext).pop();
@@ -378,7 +430,7 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                                         onCancel: () async {
                                           await ref
                                               .read(orderProvider.notifier)
-                                              .cancelOrder(order.id!);
+                                              .cancelOrder(order);
 
                                           if (mounted) {
                                             Navigator.of(dialogContext).pop();
@@ -387,7 +439,7 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                                         onApprove: () async {
                                           await ref
                                               .read(orderProvider.notifier)
-                                              .approveOrder(order.id!);
+                                              .approveOrder(order);
 
                                           if (mounted) {
                                             Navigator.of(dialogContext).pop();
@@ -407,6 +459,138 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
           ),
         );
       },
+    );
+  }
+
+  // 메뉴 버튼 빌더
+  Widget _buildNavButton(int index, IconData icon, String label) {
+    final isSelected = currentIndex == index;
+    return InkWell(
+      onTap: () => setState(() => currentIndex = index),
+      child: Container(
+        width: double.infinity,
+        height: 85,
+        decoration: BoxDecoration(
+          // 선택 시 왼쪽 바를 짙은 남색(cateSelect)으로 표시
+          border: isSelected
+              ? const Border(
+                  left: BorderSide(color: PageColors.cateSelect, width: 5))
+              : null,
+          // 선택 시 배경을 아주 연한 블루(buttonBack)로 변경
+          color: isSelected
+              ? PageColors.buttonBack.withOpacity(0.5)
+              : Colors.transparent,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              // 선택 시 짙은 남색, 비선택 시 부드러운 회색빛 블루
+              color: isSelected
+                  ? PageColors.cateSelect
+                  : PageColors.textBlue.withOpacity(0.5),
+              size: 28,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected
+                    ? PageColors.cateSelect
+                    : PageColors.textBlue.withOpacity(0.6),
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500,
+                fontFamily: 'GmarketSans', // 테마 폰트 적용
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+// 서버 제어 버튼
+  Widget _buildServerControl(bool isBroadcasting, int connectedCount) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () {
+            if (isBroadcasting) {
+              ref.read(posNetworkServiceProvider.notifier).stopBroadcast();
+            } else {
+              ref.read(posNetworkServiceProvider.notifier).startBroadcast();
+            }
+          },
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              if (isBroadcasting)
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    // 가동 중일 때 테마의 밝은 남색 활용
+                    color: PageColors.themeSelect.withOpacity(0.2),
+                  ),
+                ),
+              Icon(
+                isBroadcasting ? Icons.sensors : Icons.sensors_off,
+                size: 32,
+                color: isBroadcasting
+                    ? (connectedCount > 0
+                        ? Colors.blueAccent
+                        : DefaultColors.green)
+                    : PageColors.textBlue.withOpacity(0.3),
+              ),
+              if (connectedCount > 0)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: const BoxDecoration(
+                        color: DefaultColors.red, shape: BoxShape.circle),
+                    child: Text(
+                      '$connectedCount',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          isBroadcasting ? 'ON AIR' : 'OFFLINE',
+          style: TextStyle(
+            color: isBroadcasting
+                ? PageColors.cateSelect
+                : PageColors.textBlue.withOpacity(0.4),
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
+          ),
+        )
+      ],
+    );
+  }
+
+// 일반 아이콘 버튼 빌더
+  Widget _buildSideIconButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return IconButton(
+      onPressed: onTap,
+      icon: Icon(icon, color: color, size: 28),
+      tooltip: tooltip,
     );
   }
 }

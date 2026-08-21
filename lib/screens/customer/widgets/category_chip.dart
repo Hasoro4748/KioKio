@@ -20,37 +20,42 @@ class CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Opacity(
-        opacity: enabled ? 1 : 0.35,
-        child: InkWell(
-          onTap: onTap,
-          child: Stack(
-            clipBehavior: Clip.none,
+    return Opacity(
+      opacity: enabled ? 1 : 0.3,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          decoration: BoxDecoration(
+            // 선택 시 아주 연한 배경색을 주어 영역 구분
+            color: selected
+                ? PageColors.themeSelect.withOpacity(0.1)
+                : Colors.transparent,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: fSize,
-                    color: selected
-                        ? PageColors.cateSelect
-                        : PageColors.cateUnSelect,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                  ),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: fSize,
+                  fontFamily: 'GmarketSans',
+                  // 선택 시 cateSelect(짙은 남색), 비선택 시 흐린 남색
+                  color: selected
+                      ? PageColors.cateSelect
+                      : PageColors.textBlue.withOpacity(0.5),
+                  fontWeight: selected ? FontWeight.w900 : FontWeight.w500,
                 ),
               ),
-              Positioned(
-                bottom: -1,
-                left: 0,
-                right: 0,
-                child: Container(
-                  height: 5,
-                  color:
-                      selected ? iconThemeColor.shade800 : Colors.transparent,
+              const SizedBox(height: 4),
+              // 하단 인디케이터 (둥근 모양으로 세련되게)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                height: 4,
+                width: selected ? 20 : 0,
+                decoration: BoxDecoration(
+                  color: PageColors.cateSelect,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ],

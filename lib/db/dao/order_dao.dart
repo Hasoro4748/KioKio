@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:kiosk/db/app_database.dart';
+import 'package:kiosk/models/order_model.dart';
 
 class OrderDao {
   final AppDatabase db;
@@ -39,9 +40,28 @@ class OrderDao {
     );
   }
 
-  //삭제 - 미구현
-  Future<void> deleteOrder(int orderId) {
-    return (db.delete(db.orders)..where((t) => t.id.equals(orderId))).go();
+  Future<void> approveStatus(OrderModel order) {
+    final orderId = order.id;
+    return (db.update(db.orders)..where((t) => t.id.equals(orderId!))).write(
+      OrdersCompanion(
+        status: Value("승인"),
+      ),
+    );
+  }
+
+  Future<void> cancelStatus(OrderModel order) {
+    final orderId = order.id;
+    return (db.update(db.orders)..where((t) => t.id.equals(orderId!))).write(
+      OrdersCompanion(
+        status: Value("취소"),
+      ),
+    );
+  }
+
+  //삭제
+  Future<void> deleteOrder(OrderModel order) {
+    final orderId = order.id;
+    return (db.delete(db.orders)..where((t) => t.id.equals(orderId!))).go();
   }
 
   //id로 찾기

@@ -60,7 +60,15 @@ class OrderRepository {
     await orderDao.updateStatus(orderId, status);
   }
 
-  Future<void> deleteOrder(int orderId) async {
-    await orderDao.deleteOrder(orderId);
+  Future<void> approveOrderState(OrderModel order) async {
+    await orderDao.approveStatus(order);
+  }
+
+  Future<void> cancelOrderState(OrderModel order) async {
+    await orderDao.cancelStatus(order);
+  }
+
+  Future<void> deleteOrder(OrderModel order) async {
+    await orderDao.deleteOrder(order);
   }
 }

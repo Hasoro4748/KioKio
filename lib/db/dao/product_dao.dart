@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:kiosk/db/app_database.dart';
 
 class ProductDao {
@@ -20,6 +21,11 @@ class ProductDao {
 
   Future updateProduct(ProductsCompanion companion) {
     return db.update(db.products).replace(companion);
+  }
+
+  Future updateProductStock(int id, int stock) {
+    return (db.update(db.products)..where((p) => p.id.equals(id)))
+        .write(ProductsCompanion(stock: Value(stock)));
   }
 
   Future delete(int id) {

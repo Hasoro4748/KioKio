@@ -19,63 +19,88 @@ class ThemeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rs = Responsive(context);
-
-    final double chipSize = rs.isMobile
-        ? 60
-        : rs.isTablet
-            ? 72
-            : 80;
+    final double chipSize = rs.isMobile ? 65 : 85;
 
     return Opacity(
-      opacity: enabled ? 1 : 0.35,
+      opacity: enabled ? 1 : 0.3,
       child: Padding(
-        padding: EdgeInsets.symmetric(
-          vertical: rs.padding(4),
-        ),
+        padding: EdgeInsets.symmetric(vertical: rs.padding(6)),
         child: InkWell(
-          borderRadius: BorderRadius.circular(
-            selected ? rs.radius(25) : rs.radius(60),
-          ),
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            width: chipSize,
-            height: chipSize,
-            decoration: BoxDecoration(
-              border: Border.all(
-                width: 1,
-                color: PageColors.themeUnSelect,
-              ),
-              borderRadius: BorderRadius.circular(
-                selected ? 20 : 60,
-              ),
-              color:
-                  selected ? PageColors.themeSelect : PageColors.themeUnSelect,
-            ),
-            child: true
-                ? Image.asset('assets/img/theme/${label}.png')
-                : Padding(
-                    padding: EdgeInsets.all(
-                      rs.padding(8),
+          onTap: enabled ? onTap : null,
+          child: Stack(
+            // 선택 인디케이터를 위한 Stack
+            alignment: Alignment.center,
+            children: [
+              // 1. 선택 시 왼쪽 인디케이터 바
+              if (selected)
+                Positioned(
+                  left: 0,
+                  child: Container(
+                    width: 4,
+                    height: chipSize * 0.6,
+                    decoration: BoxDecoration(
+                      color: PageColors.cateSelect,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    child: Center(
-                      child: Text(
-                        label,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: selected
-                              ? PageColors.cateSelect
-                              : PageColors.cateUnSelect,
-                          fontWeight:
-                              selected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+
+              // 2. 메인 칩 바디
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                width: chipSize,
+                height: chipSize,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(selected ? 20 : 30),
+                  color: selected
+                      ? PageColors.themeSelect.withOpacity(0.2) // 선택 시 연한 배경
+                      : Colors.transparent,
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ]
+                      : [],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // 이미지 영역
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.all(rs.padding(10)),
+                        child: Image.asset(
+                          'assets/img/theme/$label.png',
+                          fit: BoxFit.contain,
+                          // 선택되지 않았을 때 약간 흐리게 처리 가능
+                          color:
+                              selected ? null : Colors.white.withOpacity(0.8),
+                          colorBlendMode: selected ? null : BlendMode.modulate,
                         ),
                       ),
                     ),
-                  ),
+                    // 라벨 텍스트 (선택 시에만 강조하거나 작게 표시)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight:
+                              selected ? FontWeight.w900 : FontWeight.w500,
+                          color:
+                              selected ? PageColors.cateSelect : Colors.white70,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

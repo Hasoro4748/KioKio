@@ -3,12 +3,12 @@ import 'dart:io';
 
 import 'package:bonsoir/bonsoir.dart';
 import 'package:kiosk/models/order_model.dart';
+import 'package:kiosk/network/pos_network_status.dart';
 import 'package:kiosk/providers/order_providers.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_web_socket/shelf_web_socket.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kiosk/utils/pos_network_status.dart';
 
 class PosNetworkService extends StateNotifier<PosNetworkState> {
   PosNetworkService(this.ref)
@@ -19,6 +19,14 @@ class PosNetworkService extends StateNotifier<PosNetworkState> {
   final Ref ref;
 
   Future<void> startBroadcast() async {
+    if (state.status == PosBroadcastStatus.broadcasting ||
+        state.status == PosBroadcastStatus.starting) return;
+
+    // 2. 새로운 서버를 열기 전에 기존에 남아있을 수 있는 자원을 완전히 정리
+    await stopBroadcast();
+
+    state = state.copyWith(status: PosBroadcastStatus.starting);
+
     if (state.status == PosBroadcastStatus.broadcasting) return;
 
     // 상태 웹소캣
@@ -29,6 +37,9 @@ class PosNetworkService extends StateNotifier<PosNetworkState> {
         (WebSocketChannel webSocket) {
           _clients.add(webSocket);
           _updateConnectionCount();
+
+          final welcomeMessage = jsonEncode({'event': 'connection_confirmed'});
+          webSocket.sink.add(welcomeMessage);
 
           webSocket.stream.listen((message) {
             try {
@@ -49,7 +60,8 @@ class PosNetworkService extends StateNotifier<PosNetworkState> {
         },
       );
 
-      _server = await io.serve(handler, InternetAddress.anyIPv4, 8080);
+      _server =
+          await io.serve(handler, InternetAddress.anyIPv4, 8080, shared: true);
       print("웹소켓 서버 실행 중: ws://${_server!.address.address}:${_server!.port}");
 
       BonsoirService service = BonsoirService(
@@ -81,15 +93,31 @@ class PosNetworkService extends StateNotifier<PosNetworkState> {
         await _broadcast!.stop();
         _broadcast = null;
       }
-
-      // 서버 종료
-      await _server?.close(force: true);
-      _server = null;
+      if (_clients.isNotEmpty) {
+        print("연결된 클라이언트 ${_clients.length}개 종료 중...");
+        // 복사본을 만들어 순회하며 닫기
+        final clientsToClose = List.from(_clients);
+        for (var client in clientsToClose) {
+          try {
+            await client.sink.close();
+          } catch (e) {
+            print("소켓 닫기 오류: $e");
+          }
+        }
+        _clients.clear();
+      }
+      // 3. HttpServer 종료 (force: true 필수)
+      if (_server != null) {
+        await _server!.close(force: true);
+        _server = null;
+        print("HttpServer 종료됨");
+      }
     } catch (e) {
       print("서버 중단 중 실패 발생 : $e");
     } finally {
       _clients.clear();
       state = PosNetworkState(status: PosBroadcastStatus.idle);
+      _updateConnectionCount();
       print("POS 서비스 중단 완료");
     }
   }

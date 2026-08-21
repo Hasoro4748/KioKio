@@ -83,6 +83,25 @@ class ProductRepository {
     );
   }
 
+  Future<ProductModel> getProductSimple(int id) async {
+    final product = await productDao.getById(id);
+
+    return ProductModel(
+      id: product!.id,
+      name: product.name,
+      themes: [],
+      sellers: [],
+      categories: [],
+      basePrice: product.basePrice,
+      images: [],
+      description: product.description,
+      stock: product.stock,
+      isAvailable: product.isAvailable,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+    );
+  }
+
   Future<void> addProduct(ProductModel model) async {
     await db.transaction(() async {
       final productId = await productDao.insert(
@@ -108,6 +127,11 @@ class ProductRepository {
       await relationDao.clearRelations(model.id!);
       await _updateRelations(productId, model);
     });
+  }
+
+  Future<void> updateStock(int id, int stock) async {
+    print("상품 개수 조절 : $id번 $stock개로 수정");
+    await productDao.updateProductStock(id, stock);
   }
 
   Future<void> deleteProduct(int productId) async {
