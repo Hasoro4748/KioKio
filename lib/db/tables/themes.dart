@@ -4,6 +4,5 @@ class Themes extends Table {
   IntColumn get id => integer().autoIncrement()();
 
   TextColumn get name => text().unique()();
-
-  TextColumn get imagePath => text()();
+  Set<Column> get pKey => {id};
 }

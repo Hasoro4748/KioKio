@@ -14,6 +14,7 @@ class OrderMapper {
     return OrdersCompanion(
       status: Value(model.status),
       createdAt: Value(model.createdAt),
+      discount: Value(model.discount),
     );
   }
 }

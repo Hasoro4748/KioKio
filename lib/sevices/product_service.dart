@@ -6,6 +6,7 @@ import 'package:kiosk/db/app_database.dart';
 import 'package:kiosk/db/repositories/product_repository.dart';
 import 'package:kiosk/models/product_model.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 class ProductService {
   final ProductRepository repository;
@@ -14,6 +15,60 @@ class ProductService {
 
   Future<List<ProductModel>> loadProducts() async {
     return repository.getProducts();
+  }
+
+  /// 동기화 받기 메소드
+  Future<void> syncProduct(Map<String, dynamic> json) async {
+    final action = json['action']; // 'create', 'update', 'delete'
+    final productsJson = json['products'] as List;
+    final imageDatas = json['imageDatas'] as Map<String, dynamic>?;
+
+    final appDir = await getApplicationDocumentsDirectory();
+    final localImageDir = Directory(p.join(appDir.path, 'product_images'));
+    // 이미지 디렉토리가 없으면 생성
+    if (!await localImageDir.exists())
+      await localImageDir.create(recursive: true);
+
+    if (imageDatas != null) {
+      for (var entry in imageDatas.entries) {
+        final fileName = entry.key;
+        final base64Data = entry.value as String;
+        final localPath = p.join(localImageDir.path, fileName);
+        final file = File(localPath);
+
+        if (!await file.exists()) {
+          final bytes = base64Decode(base64Data);
+          await file.writeAsBytes(bytes);
+          print("이미지 저장 완료: $localPath");
+        }
+      }
+    }
+
+    //초기 동기화일시 기존 데이터 삭제
+    if (action == 'initial') {
+      await repository.clearAllProducts();
+    }
+    for (var productMap in productsJson) {
+      final product = ProductModel.fromJson(productMap);
+
+      final localImages = product.images.map((img) {
+        final fileName = p.basename(img.imagePath);
+        return img.copyWith(imagePath: p.join(localImageDir.path, fileName));
+      }).toList();
+
+      switch (action) {
+        case 'initial':
+        case 'create':
+          await repository.addProduct(product.copyWith(images: localImages));
+          break;
+        case 'update':
+          await repository.updateProduct(product);
+          break;
+        case 'delete':
+          await repository.deleteProduct(product.id);
+          break;
+      }
+    }
   }
 
   Future<void> addProduct(ProductModel product) async {

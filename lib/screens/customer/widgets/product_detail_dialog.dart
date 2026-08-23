@@ -1,9 +1,5 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:kiosk/db/app_database.dart';
 import 'package:kiosk/models/product_model.dart';
-
 import 'package:kiosk/screens/customer/widgets/product_image_slider.dart';
 import 'package:kiosk/theme/common_theme.dart';
 import 'package:kiosk/utils/responsive.dart';
@@ -25,361 +21,162 @@ class ProductDetailDialog extends StatefulWidget {
 
 class _ProductDetailDialogState extends State<ProductDetailDialog> {
   int quantity = 1;
-
-  List<String> parseImages(String raw) {
-    return List<String>.from(jsonDecode(raw));
-  }
+  bool _showStockError = false;
 
   @override
   Widget build(BuildContext context) {
     final rs = Responsive(context);
-
     final product = widget.product;
-
     final bool isMobile = rs.isMobile || rs.isTablet;
 
     return Dialog(
-      insetPadding: EdgeInsets.symmetric(
-        horizontal: rs.padding(16),
-        vertical: rs.padding(16),
-      ),
+      insetPadding: EdgeInsets.all(rs.padding(16)),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(
-          rs.radius(20),
-        ),
-      ),
+          borderRadius: BorderRadius.circular(rs.radius(24))),
+      clipBehavior: Clip.antiAlias, // 다이얼로그 모서리 밖으로 컨텐츠 안나가게
       child: Container(
-        width: isMobile ? rs.w(0.95) : rs.w(0.75),
-        height: isMobile ? rs.h(0.92) : rs.h(0.72),
-        constraints: const BoxConstraints(
-          maxWidth: 1100,
-          maxHeight: 750,
-        ),
+        width: isMobile ? rs.w(0.95) : rs.w(0.7),
+        height: isMobile ? rs.h(0.85) : rs.h(0.65),
+        constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 700),
         child: isMobile
-            ? _buildMobileLayout(
-                context,
-                rs,
-                product,
-              )
-            : _buildDesktopLayout(
-                context,
-                rs,
-                product,
-              ),
+            ? _buildMobileLayout(context, rs, product)
+            : _buildDesktopLayout(context, rs, product),
       ),
     );
   }
-
-  /// =========================
-  /// 데스크탑 / 태블릿
-  /// =========================
 
   Widget _buildDesktopLayout(
-    BuildContext context,
-    Responsive rs,
-    ProductModel product,
-  ) {
+      BuildContext context, Responsive rs, ProductModel product) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        /// 이미지 영역
-        Expanded(
-          flex: 5,
-          child: Padding(
-            padding: EdgeInsets.all(
-              rs.padding(20),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(
-                  rs.radius(16),
-                ),
-                border: Border.all(
-                  width: 1,
-                  color: DefaultColors.grey,
-                ),
-              ),
-              child: ProductImagesSlider(
-                images: product.images,
-              ),
-            ),
-          ),
-        ),
-
-        /// 정보 영역
-        Expanded(
-          flex: 4,
-          child: _buildInfoSection(
-            context,
-            rs,
-            product,
-          ),
-        ),
+        Expanded(flex: 5, child: _buildImageSection(rs, product)),
+        const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+        Expanded(flex: 5, child: _buildInfoSection(context, rs, product)),
       ],
     );
   }
-
-  /// =========================
-  /// 모바일
-  /// =========================
 
   Widget _buildMobileLayout(
-    BuildContext context,
-    Responsive rs,
-    ProductModel product,
-  ) {
+      BuildContext context, Responsive rs, ProductModel product) {
     return Column(
       children: [
-        Expanded(
-          flex: 5,
-          child: Padding(
-            padding: EdgeInsets.all(
-              rs.padding(12),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(
-                  rs.radius(16),
-                ),
-                border: Border.all(
-                  width: 1,
-                  color: DefaultColors.grey,
-                ),
-              ),
-              child: ProductImagesSlider(
-                images: product.images,
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          flex: 6,
-          child: _buildInfoSection(
-            context,
-            rs,
-            product,
-          ),
-        ),
+        Expanded(flex: 4, child: _buildImageSection(rs, product)),
+        Expanded(flex: 6, child: _buildInfoSection(context, rs, product)),
       ],
     );
   }
 
-  /// =========================
-  /// 상품 정보
-  /// =========================
+  Widget _buildImageSection(Responsive rs, ProductModel product) {
+    return Container(
+      color: const Color(0xFFF9F9F9), // 연한 회색 배경
+      child: Center(child: ProductImagesSlider(images: product.images)),
+    );
+  }
 
   Widget _buildInfoSection(
-    BuildContext context,
-    Responsive rs,
-    ProductModel product,
-  ) {
+      BuildContext context, Responsive rs, ProductModel product) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        /// 닫기 버튼
-        Row(
-          children: [
-            const Spacer(),
-            IconButton(
-              iconSize: rs.isMobile ? 28 : 34,
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              icon: const Icon(
-                Icons.cancel_outlined,
-              ),
-            ),
-          ],
+        // 상단 닫기 버튼
+        Align(
+          alignment: Alignment.topRight,
+          child: IconButton(
+            padding: const EdgeInsets.all(16),
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close_rounded, size: 28),
+          ),
         ),
 
-        /// 내용
         Expanded(
           child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: rs.padding(20),
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                /// 상품명
+                // 상품명
                 Text(
                   product.name,
                   style: TextStyle(
-                    fontSize: rs.font(
-                      rs.isMobile ? 22 : 28,
-                    ),
-                    fontWeight: FontWeight.bold,
+                    fontSize: rs.font(26),
+                    fontWeight: FontWeight.w900,
+                    fontFamily: 'GmarketSans',
                   ),
                 ),
-
-                SizedBox(
-                  height: rs.padding(10),
-                ),
-
-                /// 가격
+                const SizedBox(height: 12),
+                // 가격
                 Text(
-                  '가격 : ${TextUtil.money(product.basePrice)}원',
+                  '${TextUtil.money(product.basePrice)}원',
                   style: TextStyle(
-                    fontSize: rs.font(18),
+                    fontSize: rs.font(20),
                     color: PageColors.price,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-
-                /// 재고 부족
-                if (product.stock <= 3)
-                  Padding(
-                    padding: EdgeInsets.only(
-                      top: rs.padding(6),
-                    ),
-                    child: Text(
-                      '잔여 ${product.stock}개',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: rs.font(14),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-
-                SizedBox(
-                  height: rs.padding(16),
-                ),
-
-                /// 설명
+                const SizedBox(height: 24),
+                // 설명
                 if (product.description.isNotEmpty)
                   Text(
                     product.description,
                     style: TextStyle(
                       fontSize: rs.font(14),
-                      height: 1.45,
+                      color: Colors.black54,
+                      height: 1.6,
                     ),
                   ),
 
-                SizedBox(
-                  height: rs.padding(16),
-                ),
+                const Divider(),
+                const SizedBox(height: 16),
 
-                Divider(
-                  height: rs.padding(24),
-                ),
+                // 태그 정보 (칩 형태)
+                _buildTagRow(
+                    '장르', product.themes, Colors.blue[50]!, Colors.blue[700]!),
+                const SizedBox(height: 8),
+                _buildTagRow('종류', product.categories, Colors.green[50]!,
+                    Colors.green[700]!),
+                const SizedBox(height: 8),
+                _buildTagRow('판매자', product.sellers, Colors.orange[50]!,
+                    Colors.orange[700]!),
 
-                /// 정보
-                _buildInfoText(
-                  rs,
-                  '장르',
-                  product.themes.toString(),
-                ),
+                const SizedBox(height: 12),
 
-                _buildInfoText(
-                  rs,
-                  '종류',
-                  product.categories.toString(),
-                ),
-
-                _buildInfoText(
-                  rs,
-                  '판매자',
-                  product.sellers.toString(),
-                ),
-
-                SizedBox(
-                  height: rs.padding(24),
-                ),
-
-                /// 수량
+                // 수량 조절 섹션
                 Text(
-                  '수량',
+                  '구매 수량',
                   style: TextStyle(
-                    fontSize: rs.font(18),
-                    fontWeight: FontWeight.bold,
-                  ),
+                      fontSize: rs.font(16), fontWeight: FontWeight.bold),
                 ),
-
-                SizedBox(
-                  height: rs.padding(10),
-                ),
-
-                Row(
-                  children: [
-                    IconButton(
-                      iconSize: rs.isMobile ? 30 : 36,
-                      onPressed: quantity > 1
-                          ? () {
-                              setState(() {
-                                quantity--;
-                              });
-                            }
-                          : null,
-                      icon: const Icon(
-                        Icons.remove_circle,
-                      ),
-                    ),
-                    SizedBox(
-                      width: rs.padding(12),
-                    ),
-                    Text(
-                      '$quantity',
-                      style: TextStyle(
-                        fontSize: rs.font(22),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(
-                      width: rs.padding(12),
-                    ),
-                    IconButton(
-                      iconSize: rs.isMobile ? 30 : 36,
-                      onPressed: quantity < product.stock
-                          ? () {
-                              setState(() {
-                                quantity++;
-                              });
-                            }
-                          : null,
-                      icon: const Icon(
-                        Icons.add_circle,
-                      ),
-                    ),
-                  ],
-                ),
-
-                SizedBox(
-                  height: rs.padding(20),
-                ),
+                const SizedBox(height: 12),
+                _buildQuantityControl(rs, product),
+                const SizedBox(height: 24),
               ],
             ),
           ),
         ),
 
-        /// 장바구니 버튼
+        // 장바구니 담기 버튼 (하단 고정)
         Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: rs.padding(16),
-            vertical: rs.padding(12),
-          ),
+          padding: const EdgeInsets.all(20),
           child: SizedBox(
             width: double.infinity,
-            height: rs.isMobile ? 52 : 60,
+            height: 56,
             child: ElevatedButton(
               onPressed: () {
                 widget.onAddCart(quantity);
-
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: iconThemeColor.shade50,
+                backgroundColor: PageColors.cateSelect,
+                foregroundColor: Colors.white,
+                elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    rs.radius(14),
-                  ),
-                ),
+                    borderRadius: BorderRadius.circular(16)),
               ),
               child: Text(
                 '장바구니 담기',
                 style: TextStyle(
-                  fontSize: rs.font(18),
-                  fontWeight: FontWeight.bold,
-                ),
+                    fontSize: rs.font(18), fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -388,34 +185,119 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
     );
   }
 
-  Widget _buildInfoText(
-    Responsive rs,
-    String title,
-    String value,
-  ) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: rs.padding(6),
-      ),
-      child: RichText(
-        text: TextSpan(
-          style: TextStyle(
-            fontSize: rs.font(12),
-            color: Colors.black87,
-          ),
-          children: [
-            TextSpan(
-              text: '$title : ',
+  // 수량 조절 위젯
+  Widget _buildQuantityControl(Responsive rs, ProductModel product) {
+    return Column(
+      // Row를 Column으로 감싸서 아래에 경고 문구 추가
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // --- 재고 부족 경고 문구 (스낵바 대체) ---
+        if (_showStockError)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, left: 4),
+            child: Text(
+              '⚠️ 현재 재고(${product.stock}개)를 초과할 수 없습니다.',
               style: const TextStyle(
-                fontWeight: FontWeight.bold,
+                  color: Colors.redAccent,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold),
+            ),
+          ),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(12),
+            // 에러가 있을 때 테두리를 빨간색으로 강조 (선택 사항)
+            border: _showStockError
+                ? Border.all(color: Colors.redAccent, width: 1.5)
+                : null,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                iconSize: 28,
+                onPressed: quantity > 1
+                    ? () {
+                        setState(() {
+                          quantity--;
+                          _showStockError = false; // 수량 줄이면 에러 문구 해제
+                        });
+                      }
+                    : null,
+                icon: Icon(Icons.remove_circle_outline,
+                    color: quantity > 1 ? PageColors.cateSelect : Colors.grey),
               ),
-            ),
-            TextSpan(
-              text: value,
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  '$quantity',
+                  style: TextStyle(
+                      fontSize: rs.font(20), fontWeight: FontWeight.w900),
+                ),
+              ),
+              IconButton(
+                iconSize: 28,
+                onPressed: () {
+                  if (quantity < product.stock) {
+                    setState(() {
+                      quantity++;
+                      _showStockError = false;
+                    });
+                  } else {
+                    // --- 스낵바 대신 내부 상태를 갱신 ---
+                    setState(() {
+                      _showStockError = true;
+                    });
+                  }
+                },
+                icon: Icon(Icons.add_circle_outline,
+                    color: quantity < product.stock
+                        ? PageColors.cateSelect
+                        : Colors.grey),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
+    );
+  }
+
+  // 태그 행 위젯
+  Widget _buildTagRow(
+      String label, List<String> tags, Color bgColor, Color textColor) {
+    if (tags.isEmpty) return const SizedBox();
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+            width: 45,
+            child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(label,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey)))),
+        Expanded(
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: tags
+                .map((t) => Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                          color: bgColor,
+                          borderRadius: BorderRadius.circular(6)),
+                      child: Text(t,
+                          style: TextStyle(
+                              color: textColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600)),
+                    ))
+                .toList(),
+          ),
+        ),
+      ],
     );
   }
 }

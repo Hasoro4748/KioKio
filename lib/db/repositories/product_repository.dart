@@ -102,15 +102,38 @@ class ProductRepository {
     );
   }
 
+  /// 상품 데이터 초기화
+  Future<void> clearAllProducts() async {
+    await db.transaction(() async {
+      await db.delete(db.productThemes).go();
+      await db.delete(db.productSellers).go();
+      await db.delete(db.productCategories).go();
+      await db.delete(db.productImages).go();
+      await db.delete(db.products).go();
+
+      await db.delete(db.themes).go();
+      await db.delete(db.sellers).go();
+      await db.delete(db.categories).go();
+    });
+  }
+
   Future<void> addProduct(ProductModel model) async {
     await db.transaction(() async {
-      final productId = await productDao.insert(
-          ProductMapper.toCompanion(model).copyWith(id: const Value.absent()));
+      // insert 대신 insert(..., mode: InsertMode.replace) 사용
+      final productId = await db.into(db.products).insert(
+            ProductMapper.toCompanion(model),
+            mode: InsertMode.replace, // 중복 시 덮어쓰기
+          );
 
+      // 기존 이미지 삭제 후 다시 추가 (중복 방지)
+      await imageDao.deleteByProductId(productId);
       for (var imageModel in model.images) {
         await imageDao.insert(ProductImageMapper.toSaveCompanion(imageModel)
-            .copyWith(id: Value.absent(), productId: Value(productId)));
+            .copyWith(id: const Value.absent(), productId: Value(productId)));
       }
+
+      // 관계 업데이트 (이미 clearRelations가 포함되어 있다면 유지)
+      await relationDao.clearRelations(productId);
       await _updateRelations(productId, model);
     });
   }
@@ -118,13 +141,16 @@ class ProductRepository {
   Future<void> updateProduct(ProductModel model) async {
     await db.transaction(() async {
       final productId = model.id;
-
+      // 상품 기본 정보 업데이트
       await productDao.updateProduct(ProductMapper.toCompanion(model));
-
+      // 기존 이미지 삭제 후 다시 추가
+      await imageDao.deleteByProductId(productId);
       for (var imageModel in model.images) {
-        await imageDao.update(ProductImageMapper.toCompanion(imageModel));
+        await imageDao.insert(ProductImageMapper.toSaveCompanion(imageModel)
+            .copyWith(id: const Value.absent(), productId: Value(productId)));
       }
-      await relationDao.clearRelations(model.id!);
+      // 관계 초기화 후 재생성
+      await relationDao.clearRelations(model.id);
       await _updateRelations(productId, model);
     });
   }

@@ -3,15 +3,23 @@ class OrderModel {
   final List<OrderItemModel> items;
   final DateTime createdAt;
   String status; // 처리중, 승인, 취소
+  final int discount;
 
   OrderModel({
     this.id,
     required this.items,
     required this.createdAt,
     this.status = '처리중',
+    this.discount = 0, // 기본값 0
   });
+  // 최종 결제 금액 (상품 총합 - 할인액)
+  int get totalPrice =>
+      (items.fold(0, (sum, item) => sum + item.totalPrice) - discount)
+          .clamp(0, double.infinity)
+          .toInt();
 
-  int get totalPrice => items.fold(0, (sum, item) => sum + item.totalPrice);
+  // 할인 전 순수 상품 합계 (필요할 경우 사용)
+  int get subTotalPrice => items.fold(0, (sum, item) => sum + item.totalPrice);
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
@@ -21,17 +29,20 @@ class OrderModel {
           .toList(),
       createdAt: DateTime.parse(json['createdAt']),
       status: json['status'] ?? '처리중',
+      discount: json['discount'] ?? 0,
     );
   }
 
   OrderModel copyWith({
     String? status,
+    int? discount,
   }) {
     return OrderModel(
       id: id,
       items: items,
       createdAt: createdAt,
       status: status ?? this.status,
+      discount: discount ?? this.discount,
     );
   }
 
@@ -40,6 +51,7 @@ class OrderModel {
         'items': items.map((e) => e.toJson()).toList(),
         'status': status,
         'createdAt': createdAt.toIso8601String(),
+        'discount': discount,
       };
 }
 

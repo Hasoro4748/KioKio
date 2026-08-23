@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kiosk/db/app_database.dart';
@@ -9,6 +11,7 @@ import 'package:kiosk/providers/order_providers.dart';
 import 'package:kiosk/providers/product_providers.dart';
 import 'package:kiosk/screens/customer/widgets/cart_panel.dart';
 import 'package:kiosk/screens/customer/widgets/category_chip.dart';
+import 'package:kiosk/screens/customer/widgets/idle_screen.dart';
 import 'package:kiosk/screens/customer/widgets/product_card.dart';
 import 'package:kiosk/screens/customer/widgets/product_detail_dialog.dart';
 import 'package:kiosk/screens/customer/widgets/theme_chip.dart';
@@ -26,6 +29,10 @@ class CustomerHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
+  bool _isIdle = false;
+  int _remainingSeconds = 30;
+  Timer? _countdownTimer;
+
   List<OrderItemModel> cart = [];
 
   String? selectedTheme;
@@ -57,6 +64,48 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   @override
   void initState() {
     super.initState();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _countdownTimer?.cancel();
+    setState(() {
+      _remainingSeconds = 30; // 15초로 리셋
+    });
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingSeconds > 0) {
+        setState(() {
+          _remainingSeconds--;
+        });
+      } else {
+        // 0초가 되면 대기화면으로 전환
+        timer.cancel();
+        _onIdleTimeout();
+      }
+    });
+  }
+
+  void _onIdleTimeout() {
+    if (mounted) {
+      Navigator.of(context)
+          .popUntil((route) => route.isFirst || route.settings.name == '/');
+    }
+    setState(() {
+      _isIdle = true;
+      cart.clear(); // 장바구니 초기화
+      initTag(); // 카테고리 필터 초기화
+    });
+  }
+
+  void _handleUserInteraction([_]) {
+    if (_isIdle) return; // 이미 대기화면이면 무시
+    _startTimer(); // 타이머 리셋
   }
 
   void initTag() {
@@ -66,28 +115,39 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   }
 
   List<String> getThemes(List<ProductModel> products) {
-    return products.expand((e) => e.themes).toSet().toList()..sort();
+    return products
+        .where((p) => p.isAvailable) // 판매 가능 상품만 필터링
+        .expand((e) => e.themes)
+        .toSet()
+        .toList()
+      ..sort();
   }
 
   List<String> getCategoryGroups(List<ProductModel> products) {
     final filtered = products.where((p) {
+      // 판매 가능 여부 필수 조건 추가
+      final availableOk = p.isAvailable;
       final themeOk = selectedTheme == null || p.themes.contains(selectedTheme);
-
       final sellerOk =
           selectedSeller == null || p.sellers.contains(selectedSeller);
 
-      return themeOk && sellerOk;
+      return availableOk && themeOk && sellerOk;
     });
 
     return filtered.expand((e) => e.categories).toSet().toList()..sort();
   }
 
   List<String> getSellers(List<ProductModel> products) {
-    return products.expand((e) => e.sellers).toSet().toList();
+    return products
+        .where((p) => p.isAvailable) // 판매 가능 상품만 필터링
+        .expand((e) => e.sellers)
+        .toSet()
+        .toList();
   }
 
   List<ProductModel> getFilteredProducts(List<ProductModel> products) {
     return products.where((p) {
+      final availableOk = p.isAvailable;
       final themeOk = selectedTheme == null || p.themes.contains(selectedTheme);
 
       final cateOk =
@@ -96,45 +156,26 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
       final sellerOk =
           selectedSeller == null || p.sellers.contains(selectedSeller);
 
-      return themeOk && cateOk && sellerOk;
+      return availableOk && themeOk && cateOk && sellerOk;
     }).toList();
   }
 
-  bool isSellerEnabled(
-    List<ProductModel> products,
-    String sellerName,
-  ) {
+  bool isSellerEnabled(List<ProductModel> products, String sellerName) {
     return products.any((p) {
-      final themeOk = selectedTheme == null || p.themes.contains(selectedTheme);
-
-      final cateOk =
-          selectedCate == null || p.categories.contains(selectedCate);
-
-      final sellerOk = p.sellers.contains(sellerName);
-
-      return themeOk && sellerOk && cateOk;
+      return p.isAvailable && // 추가
+          (selectedTheme == null || p.themes.contains(selectedTheme)) &&
+          (selectedCate == null || p.categories.contains(selectedCate)) &&
+          p.sellers.contains(sellerName);
     });
   }
 
-  bool isThemeEnabled(
-    List<ProductModel> products,
-    String themeName,
-  ) {
+  bool isThemeEnabled(List<ProductModel> products, String themeName) {
     return products.any((p) {
-      final sellerOk =
-          selectedSeller == null || p.sellers.contains(selectedSeller);
-
-      final cateOk =
-          selectedCate == null || p.categories.contains(selectedCate);
-
-      final themeOk = p.themes.contains(themeName);
-
-      return themeOk && sellerOk && cateOk;
+      return p.isAvailable && // 추가
+          (selectedSeller == null || p.sellers.contains(selectedSeller)) &&
+          (selectedCate == null || p.categories.contains(selectedCate)) &&
+          p.themes.contains(themeName);
     });
-  }
-
-  bool canOrder(ProductModel product) {
-    return product.isAvailable && product.stock > 0;
   }
 
   void _goHome() {
@@ -238,6 +279,22 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
         ref.read(kioskNetworkProvider.notifier).sendOrder(order);
     ScaffoldMessenger.of(context).removeCurrentSnackBar();
     if (isSent) {
+      final productNotifier = ref.read(productProvider.notifier);
+      final products = ref.read(productProvider).value ?? [];
+
+      for (var item in cart) {
+        final product =
+            products.firstWhereOrNull((p) => p.id == item.productId);
+        if (product != null) {
+          // 기존 재고에서 주문 수량만큼 뺀 새로운 모델 생성
+          final updatedProduct = product.copyWith(
+              stock: (product.stock - item.quantity)
+                  .clamp(0, double.infinity)
+                  .toInt());
+          // DB 업데이트 호출 (Repository 연동)
+          await productNotifier.updateProduct(updatedProduct);
+        }
+      }
       _showOrderCompleteOverlay(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -269,29 +326,36 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
         });
 
         return Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20)],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.check_circle_rounded,
-                    color: DefaultColors.green, size: 100),
-                const SizedBox(height: 20),
-                Text(
-                  "주문이 완료되었습니다",
-                  style: TextStyle(
-                    color: PageColors.textBlue,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: 'GmarketSans',
+          child: Material(
+            // 1. 여기에 Material 위젯을 추가합니다.
+            color: Colors.transparent, // 배경은 투명하게 유지
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  const BoxShadow(color: Colors.black26, blurRadius: 20)
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check_circle_rounded,
+                      color: DefaultColors.green, size: 100),
+                  const SizedBox(height: 20),
+                  Text(
+                    "주문이 완료되었습니다",
+                    style: TextStyle(
+                      color: PageColors.textBlue,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: 'GmarketSans',
+                      decoration: TextDecoration.none, // 2. 확실히 하기 위해 데코레이션 제거
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -299,59 +363,232 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     );
   }
 
-  Widget _buildNetworkIcon(KioskStatus status) {
+  Widget _buildEmptyState(Responsive rs, KioskStatus status) {
+    String message;
+    IconData icon;
+    Color iconColor;
+
     switch (status) {
       case KioskStatus.connected:
-        return const Icon(
-          Icons.check_circle,
-          color: DefaultColors.green,
-          size: 36,
-        );
+        message = '등록된 상품이 없습니다.\nPOS에서 상품을 추가하거나 동기화해 주세요.';
+        icon = Icons.inventory_2_outlined;
+        iconColor = iconThemeColor[300]!;
+        break;
       case KioskStatus.searching:
-        return const Icon(
-          Icons.check_circle,
-          color: DefaultColors.yellow,
-          size: 36,
-        );
+        message = 'POS 서버를 찾는 중입니다...\n서버가 켜져 있는지 확인해 주세요.';
+        icon = Icons.manage_search_rounded;
+        iconColor = DefaultColors.yellow;
+        break;
       case KioskStatus.error:
-        return const Icon(
-          Icons.check_circle,
-          color: DefaultColors.red,
-          size: 36,
-        );
+        message = 'POS 연결 중 오류가 발생했습니다.\n다시 시도해 주세요.';
+        icon = Icons.sync_problem_rounded;
+        iconColor = DefaultColors.red;
+        break;
       default:
-        return const Icon(
-          Icons.circle,
-          color: DefaultColors.white,
-          size: 36,
-        );
+        message = 'POS 서버와 연결되지 않았습니다.\n아래 버튼을 눌러 연결을 시작하세요.';
+        icon = Icons.cloud_off_rounded;
+        iconColor = iconThemeColor[200]!;
     }
+
+    return Scaffold(
+      backgroundColor: baseBackgroundColor[100],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: _handleLogoTap,
+              child: Opacity(
+                opacity: 0.3,
+                child: Image.asset('assets/icon/appIcon2.png', width: 80),
+              ),
+            ),
+            const SizedBox(height: 48),
+
+            // 탐색 중일 때 회전 애니메이션 추가 (옵션)
+            if (status == KioskStatus.searching)
+              const CircularProgressIndicator()
+            else
+              Icon(icon, size: rs.font(80), color: iconColor),
+
+            const SizedBox(height: 24),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: rs.font(18),
+                fontWeight: FontWeight.w500,
+                color: iconThemeColor[700],
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 40),
+
+            // --- 상황별 버튼 배치 (핵심 수정 부분) ---
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // 1. 연결 시작 버튼 (대기/에러 상태일 때)
+                if (status == KioskStatus.idle || status == KioskStatus.error)
+                  ElevatedButton.icon(
+                    onPressed: _onNetworkIconTap,
+                    icon: const Icon(Icons.sync),
+                    label: const Text('POS 서버 연결 시도'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 16),
+                      backgroundColor: iconThemeColor[500],
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
+                    ),
+                  ),
+
+                // 2. 탐색 중단 버튼 (탐색 중이거나 에러 상태일 때)
+                if (status == KioskStatus.searching ||
+                    status == KioskStatus.error)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        ref
+                            .read(kioskNetworkProvider.notifier)
+                            .stopDiscoveryService();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('🛑 탐색이 중단되었습니다.')),
+                        );
+                      },
+                      icon: const Icon(Icons.stop_circle_outlined,
+                          color: Colors.red),
+                      label: const Text('탐색 중단',
+                          style: TextStyle(color: Colors.red)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 16),
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
+            const SizedBox(height: 32),
+            TextButton(
+              onPressed: _goHome,
+              child: Text(
+                '메인으로 돌아가기',
+                style: TextStyle(color: iconThemeColor[400]),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isIdle) {
+      return IdleScreen(onStart: () {
+        setState(() {
+          _isIdle = false;
+          _startTimer(); // 다시 15초 카운트 시작
+        });
+      });
+    }
+
+    // 2. 본래 화면을 Listener로 감싸서 터치 감지
+    return Listener(
+      onPointerDown: _handleUserInteraction,
+      behavior: HitTestBehavior.translucent,
+      child: Stack(
+        // 카운트다운 문구를 겹쳐서 띄우기 위해 Stack 사용
+        children: [
+          _buildMainContent(context),
+
+          // --- 카운트다운 경고 문구 추가 (10초 이하일 때만 노출) ---
+          if (_remainingSeconds <= 10)
+            Positioned(
+              top: 100,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Material(
+                  // 1. Material 위젯으로 감싸줍니다.
+                  color: Colors.transparent, // 배경은 투명하게
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(50),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black26, blurRadius: 10)
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '조작이 없을 시 $_remainingSeconds초 후 화면이 초기화됩니다.',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            decoration:
+                                TextDecoration.none, // 2. (선택사항) 밑줄 강제 제거
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          '화면을 터치하면 계속 주문할 수 있습니다.',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                            decoration:
+                                TextDecoration.none, // 2. (선택사항) 밑줄 강제 제거
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainContent(BuildContext context) {
     final rs = Responsive(context);
     final productsAsync = ref.watch(productProvider);
-
     final networkStatus = ref.watch(kioskNetworkProvider);
+
     return productsAsync.when(
-        loading: () => const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
-              ),
-            ),
-        error: (error, stack) => Scaffold(
-              body: Center(
-                child: Text('상품을 불러오지 못했습니다.\n$error'),
-              ),
-            ),
+        loading: () =>
+            const Scaffold(body: Center(child: CircularProgressIndicator())),
+        error: (error, stack) =>
+            Scaffold(body: Center(child: Text('상품 로드 실패\n$error'))),
         data: (products) {
+          // --- 핵심 수정 부분: 연결 상태를 최우선으로 확인 ---
+
+          // 1. POS와 연결되지 않은 경우, 무조건 안내 화면 표시
+          if (networkStatus != KioskStatus.connected) {
+            return _buildEmptyState(rs, networkStatus);
+          }
+
+          // 2. 연결은 되었으나 상품이 아직 동기화되지 않은 경우
+          if (products.isEmpty) {
+            return _buildEmptyState(rs, networkStatus);
+          }
+
+          // 3. 연결 성공 + 상품 존재 시에만 본래의 상품 목록 표시
           final themes = getThemes(products);
-
           final sellers = getSellers(products);
-
           final categoryGroups = getCategoryGroups(products);
-
           final filteredProducts = getFilteredProducts(products);
 
           return Scaffold(
@@ -381,7 +618,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                             horizontal: rs.padding(12)),
                         child: GestureDetector(
                           onTap: _handleLogoTap, // 3번 탭 로직
-                          child: Image.asset('assets/img/logo/logo1.png',
+                          child: Image.asset('assets/icon/appIcon2.png',
                               filterQuality: FilterQuality.high),
                         ),
                       ),
@@ -390,49 +627,25 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                       Expanded(
                         child: ListView(
                           physics: const BouncingScrollPhysics(),
-                          children: themes
-                              .map((t) => ThemeChip(
-                                    label: t,
-                                    selected: selectedTheme == t,
-                                    enabled: isThemeEnabled(products, t),
-                                    onTap: () => setState(() => selectedTheme =
-                                        (selectedTheme == t ? null : t)),
-                                  ))
-                              .toList(),
-                        ),
-                      ),
-
-                      // 시스템 제어 영역 (하단 고정)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 24),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Column(
-                          children: [
-                            IconButton(
-                              onPressed: _onNetworkIconTap,
-                              icon: _buildNetworkIcon(networkStatus),
-                              tooltip: 'POS 연결',
-                            ),
-                            const SizedBox(height: 12),
-                            IconButton(
-                              onPressed: () => ref
-                                  .read(kioskNetworkProvider.notifier)
-                                  .stopDiscoveryService(),
-                              icon: Icon(
-                                Icons.stop_circle_outlined,
-                                color: (networkStatus ==
-                                            KioskStatus.connected ||
-                                        networkStatus == KioskStatus.searching)
-                                    ? DefaultColors.red
-                                    : Colors.white.withOpacity(0.3),
-                                size: 32,
-                              ),
-                            ),
-                          ],
+                          children: themes.map((t) {
+                            final bool isEnabled = isThemeEnabled(products, t);
+                            return ThemeChip(
+                              label: t,
+                              selected: selectedTheme == t,
+                              enabled: isEnabled,
+                              onTap: () {
+                                setState(() {
+                                  if (!isEnabled) {
+                                    // 비활성 상태에서 클릭 시: 다른 필터 초기화 후 강제 선택
+                                    selectedSeller = null;
+                                    selectedCate = null;
+                                  }
+                                  selectedTheme =
+                                      (selectedTheme == t ? null : t);
+                                });
+                              },
+                            );
+                          }).toList(),
                         ),
                       ),
                     ],
@@ -541,14 +754,27 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                               ),
 
                               // 기존 판매자 리스트
-                              ...sellers.map((s) => CategoryChip(
-                                    fSize: rs.font(18),
-                                    label: s,
-                                    selected: selectedSeller == s,
-                                    enabled: isSellerEnabled(products, s),
-                                    onTap: () => setState(() => selectedSeller =
-                                        (selectedSeller == s ? null : s)),
-                                  )),
+                              ...sellers.map((s) {
+                                final bool isEnabled =
+                                    isSellerEnabled(products, s);
+                                return CategoryChip(
+                                  fSize: rs.font(18),
+                                  label: s,
+                                  selected: selectedSeller == s,
+                                  enabled: isEnabled,
+                                  onTap: () {
+                                    setState(() {
+                                      if (!isEnabled) {
+                                        // 비활성 상태에서 클릭 시: 다른 필터 초기화 후 강제 선택
+                                        selectedTheme = null;
+                                        selectedCate = null;
+                                      }
+                                      selectedSeller =
+                                          (selectedSeller == s ? null : s);
+                                    });
+                                  },
+                                );
+                              }),
                             ],
                           ),
                         ),
@@ -616,7 +842,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
                                           return ProductCard(
                                             product: product,
-                                            onTap: canOrder(product)
+                                            onTap: !product.isSoldOut
                                                 ? () => showDialog(
                                                       context: context,
                                                       builder: (_) =>
@@ -651,18 +877,6 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                                               );
                                                             }
                                                           });
-                                                          ScaffoldMessenger.of(
-                                                                  context)
-                                                              .removeCurrentSnackBar();
-                                                          ScaffoldMessenger.of(
-                                                            context,
-                                                          ).showSnackBar(
-                                                            SnackBar(
-                                                              content: Text(
-                                                                '${product.name} ${quantity}개를 장바구니에 담았습니다.',
-                                                              ),
-                                                            ),
-                                                          );
                                                         },
                                                       ),
                                                     )
@@ -749,7 +963,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
                                           return ProductCard(
                                             product: product,
-                                            onTap: canOrder(product)
+                                            onTap: !product.isSoldOut
                                                 ? () => showDialog(
                                                       context: context,
                                                       builder: (_) =>
@@ -784,16 +998,6 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                                               );
                                                             }
                                                           });
-
-                                                          ScaffoldMessenger.of(
-                                                            context,
-                                                          ).showSnackBar(
-                                                            SnackBar(
-                                                              content: Text(
-                                                                '${product.name} ${quantity}개를 장바구니에 담았습니다.',
-                                                              ),
-                                                            ),
-                                                          );
                                                         },
                                                       ),
                                                     )

@@ -4,11 +4,14 @@ import 'dart:io';
 import 'package:bonsoir/bonsoir.dart';
 import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/network/pos_network_status.dart';
+import 'package:kiosk/network/productSyncMessage.dart';
 import 'package:kiosk/providers/order_providers.dart';
+import 'package:kiosk/providers/product_providers.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_web_socket/shelf_web_socket.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 class PosNetworkService extends StateNotifier<PosNetworkState> {
   PosNetworkService(this.ref)
@@ -119,6 +122,50 @@ class PosNetworkService extends StateNotifier<PosNetworkState> {
       state = PosNetworkState(status: PosBroadcastStatus.idle);
       _updateConnectionCount();
       print("POS 서비스 중단 완료");
+    }
+  }
+
+  // 상품 동기화 메시지 전송
+  void broadcastProductSync(ProductSyncMessage message) {
+    final jsonMessage = jsonEncode(message.toJson());
+    for (var client in _clients) {
+      try {
+        client.sink.add(jsonMessage);
+      } catch (e) {
+        print("클라이언트 전송 실패: $e");
+      }
+    }
+  }
+
+  Future<void> syncAllProducts() async {
+    try {
+      final currentProducts = ref.read(productProvider).value ?? [];
+      Map<String, String> imageDatas = {};
+      if (currentProducts.isEmpty) {
+        print("동기화할 상품이 없습니다.");
+        return;
+      }
+
+      for (var product in currentProducts) {
+        for (var image in product.images) {
+          final file = File(image.imagePath);
+          if (await file.exists()) {
+            final fileName = p.basename(image.imagePath);
+            final bytes = await file.readAsBytes();
+            imageDatas[fileName] = base64Encode(bytes);
+          }
+        }
+      }
+
+      final syncMessage = ProductSyncMessage(
+          action: SyncAction.initial,
+          products: currentProducts,
+          imageDatas: imageDatas);
+
+      broadcastProductSync(syncMessage);
+      print("모든 클라이언트에게 ${currentProducts.length}개의 상품 동기화 메시지 전송");
+    } catch (e) {
+      print("전체 동기화 전송 실패: $e");
     }
   }
 }

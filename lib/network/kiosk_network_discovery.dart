@@ -5,11 +5,14 @@ import 'package:flutter_nsd/flutter_nsd.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/network/kiosk_network_status.dart';
+import 'package:kiosk/providers/product_providers.dart';
+import 'package:kiosk/providers/product_service_provider.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 
 class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
-  KioskNetworkDiscovery() : super(KioskStatus.idle);
+  final Ref ref;
+  KioskNetworkDiscovery(this.ref) : super(KioskStatus.idle);
 
   final flutterNsd = FlutterNsd();
   WebSocketChannel? _channel;
@@ -63,12 +66,23 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
       state = KioskStatus.connected; // 여기서 상태 변경
 
       _channel!.stream.listen(
-        (message) {
+        (message) async {
           final data = jsonDecode(message as String);
           if (data['event'] == 'connection_confirmed') {
             print("POS 연결 성공! 서버 ID: ${data['sid']}");
             state = KioskStatus.connected;
+            return;
           }
+          if (data['type'] == 'PRODUCT_SYNC') {
+            print("상품 동기화 메세지 수신");
+            final productService = ref.read(productServiceProvider);
+
+            await productService.syncProduct(data);
+
+            ref.read(productProvider.notifier).reload();
+            return;
+          }
+          // 디버그용
           print("Pos 수신 : $message");
         },
         onDone: () {

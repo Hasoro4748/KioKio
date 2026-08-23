@@ -26,7 +26,8 @@ class OrderRepository {
           id: o.id,
           items: orderItems.map((e) => OrderItemMapper.fromData(e)).toList(),
           status: o.status,
-          createdAt: o.createdAt));
+          createdAt: o.createdAt,
+          discount: o.discount));
     }
 
     return result;
@@ -39,7 +40,9 @@ class OrderRepository {
     return (OrderModel(
         id: orderId,
         items: orderItems.map((e) => OrderItemMapper.fromData(e)).toList(),
-        createdAt: order!.createdAt));
+        createdAt: order!.createdAt,
+        status: order.status, // 누락되었다면 추가
+        discount: order.discount));
   }
 
   Future<void> addOrder(OrderModel order) async {

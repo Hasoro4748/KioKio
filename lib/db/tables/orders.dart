@@ -7,5 +7,7 @@ class Orders extends Table {
 
   TextColumn get status => text()();
 
+  IntColumn get discount => integer().withDefault(const Constant(0))();
+
   Set<Column> get pKey => {id};
 }

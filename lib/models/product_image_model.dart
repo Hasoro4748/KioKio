@@ -20,6 +20,24 @@ class ProductImageModel {
     required this.createdAt,
   });
 
+  ProductImageModel copyWith({
+    int? id,
+    int? productId,
+    String? imagePath,
+    int? sortOrder,
+    bool? isThumbnail,
+    DateTime? createdAt,
+  }) {
+    return ProductImageModel(
+      id: id ?? this.id,
+      productId: productId ?? this.productId,
+      imagePath: imagePath ?? this.imagePath,
+      sortOrder: sortOrder ?? this.sortOrder,
+      isThumbnail: isThumbnail ?? this.isThumbnail,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'productId': productId,

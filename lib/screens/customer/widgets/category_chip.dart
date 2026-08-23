@@ -23,7 +23,7 @@ class CategoryChip extends StatelessWidget {
     return Opacity(
       opacity: enabled ? 1 : 0.3,
       child: InkWell(
-        onTap: enabled ? onTap : null,
+        onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           decoration: BoxDecoration(

@@ -21,17 +21,24 @@ class PosScreen extends ConsumerStatefulWidget {
 class _PosScreenState extends ConsumerState<PosScreen> {
   List<OrderItemModel> cart = [];
   GroupingType _currentGrouping = GroupingType.theme;
+  int _discountAmount = 0;
 
-  void _addToCart(ProductModel product) {
+  void _addToCart(ProductModel product, {bool isService = false}) {
     setState(() {
-      final index = cart.indexWhere((item) => item.productId == product.id);
+      final name = isService ? "${product.name} (서비스)" : product.name;
+      final price = isService ? 0 : product.basePrice;
+
+      // 장바구니에서 동일한 이름(또는 ID와 서비스 여부 조합)의 상품이 있는지 확인
+      final index = cart.indexWhere(
+          (item) => item.productId == product.id && item.basePrice == price);
+
       if (index >= 0) {
         cart[index] = cart[index].copyWith(quantity: cart[index].quantity + 1);
       } else {
         cart.add(OrderItemModel(
           productId: product.id,
-          name: product.name,
-          basePrice: product.basePrice,
+          name: name,
+          basePrice: price,
           quantity: 1,
         ));
       }
@@ -40,11 +47,27 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
   Future<void> _checkout() async {
     if (cart.isEmpty) return;
+    final items = List<OrderItemModel>.from(cart);
+    if (_discountAmount > 0) {
+      items.add(OrderItemModel(
+        productId: -1, // 할인용 가상 ID
+        name: "즉석 할인",
+        basePrice: -_discountAmount,
+        quantity: 1,
+      ));
+    }
+
     final order = OrderModel(
-        items: List.from(cart), createdAt: DateTime.now(), status: '승인');
+        items: List.from(cart),
+        createdAt: DateTime.now(),
+        status: '승인',
+        discount: _discountAmount);
 
     await ref.read(orderProvider.notifier).addOrder(order);
-    setState(() => cart.clear());
+    setState(() {
+      cart.clear();
+      _discountAmount = 0;
+    });
   }
 
   @override
@@ -173,70 +196,98 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   // 슬림한 상품 카드
   Widget _buildPosProductCard(ProductModel p) {
     return InkWell(
-      onTap: () => _addToCart(p),
+      onTap: p.isSoldOut ? null : () => _addToCart(p),
+      onLongPress: p.isSoldOut ? null : () => _addToCart(p, isService: true),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: Colors.grey.shade200),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
+          // 품절 레이어 추가를 위해 Stack 사용
           children: [
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(6)),
-                  image: DecorationImage(
-                    image: KioskHelper.getImageProvider(p.thumbnail),
-                    fit: BoxFit.cover,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(6)),
+                      image: DecorationImage(
+                        image: KioskHelper.getImageProvider(p.thumbnail),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(p.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 11),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${TextUtil.money(p.basePrice)}원',
+                      Text(p.name,
                           style: const TextStyle(
-                              color: PageColors.price,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900)),
-                      // 재고 상태 표시 (StatusColor 위젯 사용)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 2),
-                        decoration: BoxDecoration(
-                          color:
-                              p.stock <= 5 ? Colors.red[50] : Colors.blue[50],
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '${p.stock}개',
-                          style: TextStyle(
-                            color: p.stock <= 5 ? Colors.red : Colors.blue[700],
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.bold, fontSize: 11),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('${TextUtil.money(p.basePrice)}원',
+                              style: const TextStyle(
+                                  color: PageColors.price,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: p.stock <= 5
+                                  ? Colors.red[50]
+                                  : Colors.blue[50],
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${p.stock}개',
+                              style: TextStyle(
+                                color: p.stock <= 5
+                                    ? Colors.red
+                                    : Colors.blue[700],
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+
+            // 2. 품절 시 어두운 오버레이와 '품절' 문구 표시
+            if (p.isSoldOut)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6), // 반투명 검정색
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Center(
+                  child: Text(
+                    '품절',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -245,7 +296,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
   // 컴팩트 주문 패널
   Widget _buildOrderPanel(double width, {bool isCompact = false}) {
-    int totalPrice = cart.fold(0, (sum, item) => sum + item.totalPrice);
+    int subTotal = cart.fold(0, (sum, item) => sum + item.totalPrice);
+    int finalTotal = (subTotal - _discountAmount).clamp(0, subTotal);
+
     return SizedBox(
       width: width,
       child: Column(
@@ -292,42 +345,94 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
               border: Border(top: BorderSide(color: Colors.grey.shade200)),
             ),
             child: Column(
               children: [
+                // 합계 및 할인 내역 표시
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('합계',
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.bold)),
-                    Text(TextUtil.money(totalPrice),
-                        style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.red)),
+                    const Text('합계', style: TextStyle(fontSize: 14)),
+                    Text(TextUtil.money(subTotal),
+                        style: const TextStyle(fontSize: 14)),
                   ],
                 ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  height: 42, // 버튼 높이 축소
-                  child: ElevatedButton(
-                    onPressed: cart.isEmpty ? null : _checkout,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: PageColors.cateSelect,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6)),
+                if (_discountAmount > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('할인',
+                            style: TextStyle(fontSize: 14, color: Colors.red)),
+                        Text("-${TextUtil.money(_discountAmount)}",
+                            style: const TextStyle(
+                                fontSize: 14, color: Colors.red)),
+                      ],
                     ),
-                    child: const Text('주문 완료',
+                  ),
+                const Divider(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('최종 결제액',
                         style: TextStyle(
                             fontSize: 15, fontWeight: FontWeight.bold)),
-                  ),
+                    Text(TextUtil.money(finalTotal),
+                        style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: PageColors.price)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // 버튼 영역 (할인 버튼 + 주문완료 버튼)
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: SizedBox(
+                        height: 48,
+                        child: OutlinedButton(
+                          onPressed: cart.isEmpty ? null : _showDiscountDialog,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _discountAmount > 0
+                                ? Colors.red
+                                : PageColors.cateSelect,
+                            side: BorderSide(
+                                color: _discountAmount > 0
+                                    ? Colors.red
+                                    : PageColors.cateSelect),
+                          ),
+                          child: Text(_discountAmount > 0 ? '할인중' : '할인',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 3,
+                      child: SizedBox(
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: cart.isEmpty ? null : _checkout,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: PageColors.cateSelect,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('주문 완료',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -368,6 +473,49 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           const SizedBox(width: 4),
           Text('$count',
               style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+        ],
+      ),
+    );
+  }
+
+  void _showDiscountDialog() {
+    final controller = TextEditingController(
+        text: _discountAmount > 0 ? _discountAmount.toString() : '');
+    int currentTotal = cart.fold(0, (sum, item) => sum + item.totalPrice);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('할인 금액 입력'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: const InputDecoration(
+            suffixText: '원',
+            hintText: '차감할 금액을 입력하세요',
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () {
+                setState(() => _discountAmount = 0);
+                Navigator.pop(context);
+              },
+              child: const Text('할인 취소', style: TextStyle(color: Colors.red))),
+          ElevatedButton(
+            onPressed: () {
+              int amount = int.tryParse(controller.text) ?? 0;
+              if (amount > currentTotal) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('할인액이 총 주문금액보다 클 수 없습니다.')));
+                return;
+              }
+              setState(() => _discountAmount = amount);
+              Navigator.pop(context);
+            },
+            child: const Text('적용'),
+          ),
         ],
       ),
     );

@@ -65,7 +65,6 @@ class FilterDao {
 
     return await db.into(db.themes).insert(ThemesCompanion.insert(
           name: themeName,
-          imagePath: "",
         ));
   }
 

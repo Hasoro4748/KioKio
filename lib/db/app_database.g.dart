@@ -166,8 +166,6 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
 class Product extends DataClass implements Insertable<Product> {
   final int id;
   final String name;
-
-  /// JSON 문자열 저장
   final int basePrice;
   final String description;
   final int stock;
@@ -791,14 +789,8 @@ class $ThemesTable extends Themes with TableInfo<$ThemesTable, Theme> {
       type: DriftSqlType.string,
       requiredDuringInsert: true,
       defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
-  static const VerificationMeta _imagePathMeta =
-      const VerificationMeta('imagePath');
   @override
-  late final GeneratedColumn<String> imagePath = GeneratedColumn<String>(
-      'image_path', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  @override
-  List<GeneratedColumn> get $columns => [id, name, imagePath];
+  List<GeneratedColumn> get $columns => [id, name];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -818,12 +810,6 @@ class $ThemesTable extends Themes with TableInfo<$ThemesTable, Theme> {
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
-    if (data.containsKey('image_path')) {
-      context.handle(_imagePathMeta,
-          imagePath.isAcceptableOrUnknown(data['image_path']!, _imagePathMeta));
-    } else if (isInserting) {
-      context.missing(_imagePathMeta);
-    }
     return context;
   }
 
@@ -837,8 +823,6 @@ class $ThemesTable extends Themes with TableInfo<$ThemesTable, Theme> {
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
-      imagePath: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}image_path'])!,
     );
   }
 
@@ -851,14 +835,12 @@ class $ThemesTable extends Themes with TableInfo<$ThemesTable, Theme> {
 class Theme extends DataClass implements Insertable<Theme> {
   final int id;
   final String name;
-  final String imagePath;
-  const Theme({required this.id, required this.name, required this.imagePath});
+  const Theme({required this.id, required this.name});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
-    map['image_path'] = Variable<String>(imagePath);
     return map;
   }
 
@@ -866,7 +848,6 @@ class Theme extends DataClass implements Insertable<Theme> {
     return ThemesCompanion(
       id: Value(id),
       name: Value(name),
-      imagePath: Value(imagePath),
     );
   }
 
@@ -876,7 +857,6 @@ class Theme extends DataClass implements Insertable<Theme> {
     return Theme(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
-      imagePath: serializer.fromJson<String>(json['imagePath']),
     );
   }
   @override
@@ -885,20 +865,17 @@ class Theme extends DataClass implements Insertable<Theme> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
-      'imagePath': serializer.toJson<String>(imagePath),
     };
   }
 
-  Theme copyWith({int? id, String? name, String? imagePath}) => Theme(
+  Theme copyWith({int? id, String? name}) => Theme(
         id: id ?? this.id,
         name: name ?? this.name,
-        imagePath: imagePath ?? this.imagePath,
       );
   Theme copyWithCompanion(ThemesCompanion data) {
     return Theme(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
-      imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
     );
   }
 
@@ -906,56 +883,44 @@ class Theme extends DataClass implements Insertable<Theme> {
   String toString() {
     return (StringBuffer('Theme(')
           ..write('id: $id, ')
-          ..write('name: $name, ')
-          ..write('imagePath: $imagePath')
+          ..write('name: $name')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, imagePath);
+  int get hashCode => Object.hash(id, name);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Theme &&
-          other.id == this.id &&
-          other.name == this.name &&
-          other.imagePath == this.imagePath);
+      (other is Theme && other.id == this.id && other.name == this.name);
 }
 
 class ThemesCompanion extends UpdateCompanion<Theme> {
   final Value<int> id;
   final Value<String> name;
-  final Value<String> imagePath;
   const ThemesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
-    this.imagePath = const Value.absent(),
   });
   ThemesCompanion.insert({
     this.id = const Value.absent(),
     required String name,
-    required String imagePath,
-  })  : name = Value(name),
-        imagePath = Value(imagePath);
+  }) : name = Value(name);
   static Insertable<Theme> custom({
     Expression<int>? id,
     Expression<String>? name,
-    Expression<String>? imagePath,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
-      if (imagePath != null) 'image_path': imagePath,
     });
   }
 
-  ThemesCompanion copyWith(
-      {Value<int>? id, Value<String>? name, Value<String>? imagePath}) {
+  ThemesCompanion copyWith({Value<int>? id, Value<String>? name}) {
     return ThemesCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
-      imagePath: imagePath ?? this.imagePath,
     );
   }
 
@@ -968,9 +933,6 @@ class ThemesCompanion extends UpdateCompanion<Theme> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
-    if (imagePath.present) {
-      map['image_path'] = Variable<String>(imagePath.value);
-    }
     return map;
   }
 
@@ -978,8 +940,7 @@ class ThemesCompanion extends UpdateCompanion<Theme> {
   String toString() {
     return (StringBuffer('ThemesCompanion(')
           ..write('id: $id, ')
-          ..write('name: $name, ')
-          ..write('imagePath: $imagePath')
+          ..write('name: $name')
           ..write(')'))
         .toString();
   }
@@ -2039,8 +2000,16 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
       'status', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _discountMeta =
+      const VerificationMeta('discount');
   @override
-  List<GeneratedColumn> get $columns => [id, createdAt, status];
+  late final GeneratedColumn<int> discount = GeneratedColumn<int>(
+      'discount', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  @override
+  List<GeneratedColumn> get $columns => [id, createdAt, status, discount];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2066,6 +2035,10 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
     } else if (isInserting) {
       context.missing(_statusMeta);
     }
+    if (data.containsKey('discount')) {
+      context.handle(_discountMeta,
+          discount.isAcceptableOrUnknown(data['discount']!, _discountMeta));
+    }
     return context;
   }
 
@@ -2081,6 +2054,8 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       status: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      discount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}discount'])!,
     );
   }
 
@@ -2094,14 +2069,19 @@ class Order extends DataClass implements Insertable<Order> {
   final int id;
   final DateTime createdAt;
   final String status;
+  final int discount;
   const Order(
-      {required this.id, required this.createdAt, required this.status});
+      {required this.id,
+      required this.createdAt,
+      required this.status,
+      required this.discount});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['status'] = Variable<String>(status);
+    map['discount'] = Variable<int>(discount);
     return map;
   }
 
@@ -2110,6 +2090,7 @@ class Order extends DataClass implements Insertable<Order> {
       id: Value(id),
       createdAt: Value(createdAt),
       status: Value(status),
+      discount: Value(discount),
     );
   }
 
@@ -2120,6 +2101,7 @@ class Order extends DataClass implements Insertable<Order> {
       id: serializer.fromJson<int>(json['id']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       status: serializer.fromJson<String>(json['status']),
+      discount: serializer.fromJson<int>(json['discount']),
     );
   }
   @override
@@ -2129,19 +2111,24 @@ class Order extends DataClass implements Insertable<Order> {
       'id': serializer.toJson<int>(id),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'status': serializer.toJson<String>(status),
+      'discount': serializer.toJson<int>(discount),
     };
   }
 
-  Order copyWith({int? id, DateTime? createdAt, String? status}) => Order(
+  Order copyWith(
+          {int? id, DateTime? createdAt, String? status, int? discount}) =>
+      Order(
         id: id ?? this.id,
         createdAt: createdAt ?? this.createdAt,
         status: status ?? this.status,
+        discount: discount ?? this.discount,
       );
   Order copyWithCompanion(OrdersCompanion data) {
     return Order(
       id: data.id.present ? data.id.value : this.id,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       status: data.status.present ? data.status.value : this.status,
+      discount: data.discount.present ? data.discount.value : this.discount,
     );
   }
 
@@ -2150,55 +2137,66 @@ class Order extends DataClass implements Insertable<Order> {
     return (StringBuffer('Order(')
           ..write('id: $id, ')
           ..write('createdAt: $createdAt, ')
-          ..write('status: $status')
+          ..write('status: $status, ')
+          ..write('discount: $discount')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, createdAt, status);
+  int get hashCode => Object.hash(id, createdAt, status, discount);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Order &&
           other.id == this.id &&
           other.createdAt == this.createdAt &&
-          other.status == this.status);
+          other.status == this.status &&
+          other.discount == this.discount);
 }
 
 class OrdersCompanion extends UpdateCompanion<Order> {
   final Value<int> id;
   final Value<DateTime> createdAt;
   final Value<String> status;
+  final Value<int> discount;
   const OrdersCompanion({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.status = const Value.absent(),
+    this.discount = const Value.absent(),
   });
   OrdersCompanion.insert({
     this.id = const Value.absent(),
     required DateTime createdAt,
     required String status,
+    this.discount = const Value.absent(),
   })  : createdAt = Value(createdAt),
         status = Value(status);
   static Insertable<Order> custom({
     Expression<int>? id,
     Expression<DateTime>? createdAt,
     Expression<String>? status,
+    Expression<int>? discount,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (createdAt != null) 'created_at': createdAt,
       if (status != null) 'status': status,
+      if (discount != null) 'discount': discount,
     });
   }
 
   OrdersCompanion copyWith(
-      {Value<int>? id, Value<DateTime>? createdAt, Value<String>? status}) {
+      {Value<int>? id,
+      Value<DateTime>? createdAt,
+      Value<String>? status,
+      Value<int>? discount}) {
     return OrdersCompanion(
       id: id ?? this.id,
       createdAt: createdAt ?? this.createdAt,
       status: status ?? this.status,
+      discount: discount ?? this.discount,
     );
   }
 
@@ -2214,6 +2212,9 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (discount.present) {
+      map['discount'] = Variable<int>(discount.value);
+    }
     return map;
   }
 
@@ -2222,7 +2223,8 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     return (StringBuffer('OrdersCompanion(')
           ..write('id: $id, ')
           ..write('createdAt: $createdAt, ')
-          ..write('status: $status')
+          ..write('status: $status, ')
+          ..write('discount: $discount')
           ..write(')'))
         .toString();
   }
@@ -3466,12 +3468,10 @@ typedef $$ProductImagesTableProcessedTableManager = ProcessedTableManager<
 typedef $$ThemesTableCreateCompanionBuilder = ThemesCompanion Function({
   Value<int> id,
   required String name,
-  required String imagePath,
 });
 typedef $$ThemesTableUpdateCompanionBuilder = ThemesCompanion Function({
   Value<int> id,
   Value<String> name,
-  Value<String> imagePath,
 });
 
 final class $$ThemesTableReferences
@@ -3509,9 +3509,6 @@ class $$ThemesTableFilterComposer
   ColumnFilters<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get imagePath => $composableBuilder(
-      column: $table.imagePath, builder: (column) => ColumnFilters(column));
-
   Expression<bool> productThemesRefs(
       Expression<bool> Function($$ProductThemesTableFilterComposer f) f) {
     final $$ProductThemesTableFilterComposer composer = $composerBuilder(
@@ -3548,9 +3545,6 @@ class $$ThemesTableOrderingComposer
 
   ColumnOrderings<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get imagePath => $composableBuilder(
-      column: $table.imagePath, builder: (column) => ColumnOrderings(column));
 }
 
 class $$ThemesTableAnnotationComposer
@@ -3567,9 +3561,6 @@ class $$ThemesTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
-
-  GeneratedColumn<String> get imagePath =>
-      $composableBuilder(column: $table.imagePath, builder: (column) => column);
 
   Expression<T> productThemesRefs<T extends Object>(
       Expression<T> Function($$ProductThemesTableAnnotationComposer a) f) {
@@ -3618,22 +3609,18 @@ class $$ThemesTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<String> name = const Value.absent(),
-            Value<String> imagePath = const Value.absent(),
           }) =>
               ThemesCompanion(
             id: id,
             name: name,
-            imagePath: imagePath,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             required String name,
-            required String imagePath,
           }) =>
               ThemesCompanion.insert(
             id: id,
             name: name,
-            imagePath: imagePath,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) =>
@@ -5030,11 +5017,13 @@ typedef $$OrdersTableCreateCompanionBuilder = OrdersCompanion Function({
   Value<int> id,
   required DateTime createdAt,
   required String status,
+  Value<int> discount,
 });
 typedef $$OrdersTableUpdateCompanionBuilder = OrdersCompanion Function({
   Value<int> id,
   Value<DateTime> createdAt,
   Value<String> status,
+  Value<int> discount,
 });
 
 final class $$OrdersTableReferences
@@ -5073,6 +5062,9 @@ class $$OrdersTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get discount => $composableBuilder(
+      column: $table.discount, builder: (column) => ColumnFilters(column));
 
   Expression<bool> orderItemsRefs(
       Expression<bool> Function($$OrderItemsTableFilterComposer f) f) {
@@ -5113,6 +5105,9 @@ class $$OrdersTableOrderingComposer
 
   ColumnOrderings<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get discount => $composableBuilder(
+      column: $table.discount, builder: (column) => ColumnOrderings(column));
 }
 
 class $$OrdersTableAnnotationComposer
@@ -5132,6 +5127,9 @@ class $$OrdersTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get discount =>
+      $composableBuilder(column: $table.discount, builder: (column) => column);
 
   Expression<T> orderItemsRefs<T extends Object>(
       Expression<T> Function($$OrderItemsTableAnnotationComposer a) f) {
@@ -5181,21 +5179,25 @@ class $$OrdersTableTableManager extends RootTableManager<
             Value<int> id = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<String> status = const Value.absent(),
+            Value<int> discount = const Value.absent(),
           }) =>
               OrdersCompanion(
             id: id,
             createdAt: createdAt,
             status: status,
+            discount: discount,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             required DateTime createdAt,
             required String status,
+            Value<int> discount = const Value.absent(),
           }) =>
               OrdersCompanion.insert(
             id: id,
             createdAt: createdAt,
             status: status,
+            discount: discount,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) =>

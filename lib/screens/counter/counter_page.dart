@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/providers/order_providers.dart';
 import 'package:kiosk/providers/pos_network_service_provider.dart';
-import 'package:kiosk/screens/counter/pages/order_history_screen.dart';
+import 'package:kiosk/screens/counter/pages/order_total_screen.dart';
 import 'package:kiosk/screens/counter/pages/pos_screen.dart';
 import 'package:kiosk/screens/counter/pages/product_manage_screen.dart';
 import 'package:kiosk/screens/counter/pages/settings_screen.dart';
@@ -12,8 +12,7 @@ import 'package:kiosk/screens/counter/widgets/draggable_fab.dart';
 import 'package:kiosk/screens/counter/widgets/order_detail_dialog.dart';
 import 'package:kiosk/screens/model_selection.dart';
 import 'package:kiosk/theme/common_theme.dart';
-import 'package:kiosk/utils/pos_network_service.dart';
-import 'package:kiosk/utils/pos_network_status.dart';
+import 'package:kiosk/network/pos_network_status.dart';
 import 'package:kiosk/utils/responsive.dart';
 import 'package:kiosk/utils/text_util.dart';
 
@@ -58,7 +57,7 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
     final pages = [
       const PosScreen(),
       const OrderManageScreen(),
-      const OrderHistoryScreen(),
+      const OrderTotalScreen(),
       const ProductManageScreen(),
       const SettingsScreen(),
     ];
@@ -177,7 +176,7 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                               children: [
                                 _buildNavButton(0, Icons.point_of_sale, 'POS'),
                                 _buildNavButton(1, Icons.receipt_long, '주문관리'),
-                                _buildNavButton(2, Icons.history, '주문기록'),
+                                _buildNavButton(2, Icons.history, '주문통계'),
                                 _buildNavButton(
                                     3, Icons.inventory_2_outlined, '상품관리'),
                                 _buildNavButton(4, Icons.settings, '환경설정'),
@@ -279,7 +278,7 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.history),
-                  label: '주문기록',
+                  label: '주문통계',
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.inventory_2_outlined),

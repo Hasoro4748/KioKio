@@ -41,6 +41,7 @@ class ProductModel {
   });
 
   bool get canOrder => isAvailable && stock > 0;
+  bool get isSoldOut => stock <= 0;
 
   ProductModel copyWith({
     int? id,

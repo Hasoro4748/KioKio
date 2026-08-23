@@ -19,6 +19,11 @@ class ProductDao {
     return db.into(db.products).insert(companion);
   }
 
+  Future<int> insertOrUpdate(ProductsCompanion companion) {
+    // 동일한 ID가 있으면 덮어씌웁니다.
+    return db.into(db.products).insertOnConflictUpdate(companion);
+  }
+
   Future updateProduct(ProductsCompanion companion) {
     return db.update(db.products).replace(companion);
   }

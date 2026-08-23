@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kiosk/db/app_database.dart';
+import 'package:kiosk/providers/settings_provider.dart';
 import 'package:kiosk/screens/model_selection.dart';
 import 'package:kiosk/theme/common_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final appDatabase = AppDatabase();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  //저장된 설정 정보 가져오기
+  final prefs = await SharedPreferences.getInstance();
 
   SystemChrome.setEnabledSystemUIMode(
     SystemUiMode.immersiveSticky,
@@ -15,8 +20,11 @@ void main() async {
   await appDatabase.seedProducts();
 
   runApp(
-    const ProviderScope(
-      child: MyApp(),
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+      child: const MyApp(),
     ),
   );
 }

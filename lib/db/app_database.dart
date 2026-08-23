@@ -40,7 +40,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -52,6 +52,9 @@ class AppDatabase extends _$AppDatabase {
         if (from < 3) {
           await m.createTable(orders);
           await m.createTable(orderItems);
+        }
+        if (from < 4) {
+          await m.addColumn(orders, orders.discount as GeneratedColumn<Object>);
         }
       });
 
@@ -130,7 +133,7 @@ class AppDatabase extends _$AppDatabase {
           //중복 체크
           final themeId = existingTheme?.id ??
               await into(themes).insert(
-                ThemesCompanion.insert(name: themeName, imagePath: "null"),
+                ThemesCompanion.insert(name: themeName),
               );
 
           await into(productThemes).insert(
@@ -187,18 +190,23 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> resetProducts() async {
-    await delete(productThemes).go();
-    await delete(productSellers).go();
-    await delete(productCategories).go();
+    await transaction(() async {
+      await delete(productThemes).go();
+      await delete(productSellers).go();
+      await delete(productCategories).go();
 
-    await delete(productImages).go();
+      await delete(productImages).go();
 
-    await delete(themes).go();
-    await delete(sellers).go();
-    await delete(categories).go();
+      await delete(themes).go();
+      await delete(sellers).go();
+      await delete(categories).go();
 
-    await delete(products).go();
+      await delete(products).go();
+    });
+  }
 
+  Future<void> resetProductsWithData() async {
+    await resetProducts();
     await seedProducts();
   }
 }
