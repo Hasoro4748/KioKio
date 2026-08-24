@@ -196,7 +196,7 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
           Padding(
             padding: const EdgeInsets.only(top: 8, left: 4),
             child: Text(
-              '⚠️ 현재 재고(${product.stock}개)를 초과할 수 없습니다.',
+              '⚠️ 장바구니 포함 최대 주문 가능 수량은 ${product.stock}개입니다.',
               style: const TextStyle(
                   color: Colors.redAccent,
                   fontSize: 13,

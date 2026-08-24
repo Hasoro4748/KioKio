@@ -1,14 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_nsd/flutter_nsd.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kiosk/models/kiosk_setting_model.dart';
 import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/network/kiosk_network_status.dart';
 import 'package:kiosk/providers/product_providers.dart';
 import 'package:kiosk/providers/product_service_provider.dart';
+import 'package:kiosk/providers/settings_provider.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
+
+import 'package:path/path.dart' as p;
 
 class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
   final Ref ref;
@@ -82,6 +88,47 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
             ref.read(productProvider.notifier).reload();
             return;
           }
+          if (data['type'] == 'KIOSK_SETTINGS_SYNC') {
+            print("키오스크 신규 설정 수신");
+            final settingsData = data['settings'];
+            final imageDatas = data['imageDatas'] as Map<String, dynamic>?;
+
+            String finalLogoPath = settingsData['logoPath'] ?? '';
+
+            // 1. 로고 이미지 데이터가 포함되어 있다면 로컬에 저장
+            if (imageDatas != null && imageDatas.isNotEmpty) {
+              final appDir = await getApplicationDocumentsDirectory();
+              final logoDir = Directory(p.join(appDir.path, 'config'));
+              if (!await logoDir.exists())
+                await logoDir.create(recursive: true);
+
+              for (var entry in imageDatas.entries) {
+                final bytes = base64Decode(entry.value);
+                final file = File(p.join(logoDir.path, entry.key));
+                await file.writeAsBytes(bytes);
+                finalLogoPath = file.path; // 로컬 경로로 업데이트
+                print("키오스크 로고 업데이트 완료: $finalLogoPath");
+              }
+            }
+
+            // 2. SettingsProvider를 통해 상태 업데이트
+            final model = KioskSettingsModel.fromJson(settingsData);
+            // 이미지 파일이 저장되었다면 실제 로컬 경로로 덮어씌움
+            final updatedModel = KioskSettingsModel(
+              gridCount: model.gridCount,
+              logoPath:
+                  finalLogoPath.isNotEmpty ? finalLogoPath : model.logoPath,
+              welcomeMessage: model.welcomeMessage,
+              waitTime: model.waitTime,
+              useIdleScreen: model.useIdleScreen,
+            );
+
+            await ref
+                .read(settingsProvider.notifier)
+                .updateKioskSettings(updatedModel);
+            return;
+          }
+
           // 디버그용
           print("Pos 수신 : $message");
         },

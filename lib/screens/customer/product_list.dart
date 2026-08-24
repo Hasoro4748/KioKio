@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import 'package:kiosk/network/kiosk_network_status.dart';
 import 'package:kiosk/providers/kiosk_network_provider.dart';
 import 'package:kiosk/providers/order_providers.dart';
 import 'package:kiosk/providers/product_providers.dart';
+import 'package:kiosk/providers/settings_provider.dart';
 import 'package:kiosk/screens/customer/widgets/cart_panel.dart';
 import 'package:kiosk/screens/customer/widgets/category_chip.dart';
 import 'package:kiosk/screens/customer/widgets/idle_screen.dart';
@@ -17,6 +19,7 @@ import 'package:kiosk/screens/customer/widgets/product_detail_dialog.dart';
 import 'package:kiosk/screens/customer/widgets/theme_chip.dart';
 import 'package:kiosk/screens/model_selection.dart';
 import 'package:kiosk/theme/common_theme.dart';
+import 'package:kiosk/utils/kiosk_helper.dart';
 import 'package:kiosk/utils/responsive.dart';
 import 'package:kiosk/utils/text_util.dart';
 import 'package:collection/collection.dart';
@@ -74,17 +77,38 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   }
 
   void _startTimer() {
+    // 1. 현재 설정된 대기화면 사용 여부 확인
+    final settings = ref.read(settingsProvider);
+
+    // 대기화면 사용 안 함 설정이면 타이머를 취소하고 시간을 초기화한 뒤 종료
+    if (!settings.useKioskIdleScreen) {
+      _countdownTimer?.cancel();
+      setState(() {
+        _remainingSeconds = 999; // 화면에 카운트다운이 뜨지 않도록 충분히 큰 값 설정
+      });
+      return;
+    }
+
+    // 2. 사용 중일 때만 기존 로직 수행
+    final waitTime = settings.kioskWaitTime;
     _countdownTimer?.cancel();
     setState(() {
-      _remainingSeconds = 30; // 15초로 리셋
+      _remainingSeconds = waitTime > 0 ? waitTime : 15;
     });
+
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      // 타이머 도중이라도 설정이 바뀌면 중단할 수 있도록 한 번 더 체크 (선택 사항)
+      if (!ref.read(settingsProvider).useKioskIdleScreen) {
+        timer.cancel();
+        setState(() => _remainingSeconds = 999);
+        return;
+      }
+
       if (_remainingSeconds > 0) {
         setState(() {
           _remainingSeconds--;
         });
       } else {
-        // 0초가 되면 대기화면으로 전환
         timer.cancel();
         _onIdleTimeout();
       }
@@ -204,6 +228,11 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
   int _getStock(List<ProductModel> products, int productId) {
     return products.firstWhere((p) => p.id == productId).stock;
+  }
+
+  int _getCartQuantity(int productId) {
+    final item = cart.firstWhereOrNull((e) => e.productId == productId);
+    return item?.quantity ?? 0;
   }
 
   void _confirmCheckout() {
@@ -490,13 +519,27 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isIdle) {
-      return IdleScreen(onStart: () {
-        setState(() {
-          _isIdle = false;
-          _startTimer(); // 다시 15초 카운트 시작
-        });
-      });
+    final settings = ref.watch(settingsProvider);
+
+    ref.listen<AppSettings>(settingsProvider, (previous, next) {
+      if (!next.useKioskIdleScreen) {
+        _countdownTimer?.cancel();
+        setState(() => _remainingSeconds = 999);
+      } else if (previous?.useKioskIdleScreen == false &&
+          next.useKioskIdleScreen == true) {
+        // 꺼져있다 켜졌을 때 타이머 다시 시작
+        _startTimer();
+      }
+    });
+
+    if (_isIdle && settings.useKioskIdleScreen) {
+      return IdleScreen(
+          welcomeMessage: settings.kioskWelcomeMessage,
+          logoPath: settings.kioskLogoPath, // 로고 경로 전달
+          onStart: () {
+            setState(() => _isIdle = false);
+            _startTimer();
+          });
     }
 
     // 2. 본래 화면을 Listener로 감싸서 터치 감지
@@ -566,7 +609,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     final rs = Responsive(context);
     final productsAsync = ref.watch(productProvider);
     final networkStatus = ref.watch(kioskNetworkProvider);
-
+    final settings = ref.watch(settingsProvider);
     return productsAsync.when(
         loading: () =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -618,8 +661,11 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                             horizontal: rs.padding(12)),
                         child: GestureDetector(
                           onTap: _handleLogoTap, // 3번 탭 로직
-                          child: Image.asset('assets/icon/appIcon2.png',
-                              filterQuality: FilterQuality.high),
+                          child: settings.kioskLogoPath.isEmpty
+                              ? Image.asset('assets/img/logo/logo1.png') // 기본값
+                              : (settings.kioskLogoPath.startsWith('assets/')
+                                  ? Image.asset(settings.kioskLogoPath)
+                                  : Image.file(File(settings.kioskLogoPath))),
                         ),
                       ),
 
@@ -829,7 +875,11 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                         gridDelegate:
                                             SliverGridDelegateWithMaxCrossAxisExtent(
                                           maxCrossAxisExtent:
-                                              rs.isMobile ? 220 : 260,
+                                              KioskHelper.calculateMaxExtent(
+                                                  context,
+                                                  settings.kioskGridCount,
+                                                  cart.isNotEmpty,
+                                                  rs),
                                           childAspectRatio:
                                               rs.isMobile ? 0.62 : 0.72,
                                           crossAxisSpacing: rs.padding(16),
@@ -843,11 +893,33 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                           return ProductCard(
                                             product: product,
                                             onTap: !product.isSoldOut
-                                                ? () => showDialog(
+                                                ? () {
+                                                    final int currentInCart =
+                                                        _getCartQuantity(
+                                                            product.id);
+                                                    final int availableToOrder =
+                                                        product.stock -
+                                                            currentInCart;
+                                                    if (availableToOrder <= 0) {
+                                                      ScaffoldMessenger.of(
+                                                              context)
+                                                          .showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                              '이미 장바구니에 해당 상품의 모든 재고가 담겨 있습니다.'),
+                                                          backgroundColor:
+                                                              Colors.redAccent,
+                                                        ),
+                                                      );
+                                                      return;
+                                                    }
+                                                    showDialog(
                                                       context: context,
                                                       builder: (_) =>
                                                           ProductDetailDialog(
-                                                        product: product,
+                                                        product: product.copyWith(
+                                                            stock:
+                                                                availableToOrder),
                                                         onAddCart: (quantity) {
                                                           final existing = cart
                                                               .firstWhereOrNull(
@@ -879,7 +951,8 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                                           });
                                                         },
                                                       ),
-                                                    )
+                                                    );
+                                                  }
                                                 : null,
                                           );
                                         },
@@ -950,8 +1023,13 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                         ),
                                         gridDelegate:
                                             SliverGridDelegateWithMaxCrossAxisExtent(
-                                          maxCrossAxisExtent:
-                                              cart.isNotEmpty ? 280 : 320,
+                                          maxCrossAxisExtent: cart.isNotEmpty
+                                              ? 280
+                                              : KioskHelper.calculateMaxExtent(
+                                                  context,
+                                                  settings.kioskGridCount,
+                                                  cart.isNotEmpty,
+                                                  rs),
                                           childAspectRatio: 0.8,
                                           crossAxisSpacing: rs.padding(16),
                                           mainAxisSpacing: rs.padding(16),
@@ -964,11 +1042,33 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                           return ProductCard(
                                             product: product,
                                             onTap: !product.isSoldOut
-                                                ? () => showDialog(
+                                                ? () {
+                                                    final int currentInCart =
+                                                        _getCartQuantity(
+                                                            product.id);
+                                                    final int availableToOrder =
+                                                        product.stock -
+                                                            currentInCart;
+                                                    if (availableToOrder <= 0) {
+                                                      ScaffoldMessenger.of(
+                                                              context)
+                                                          .showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                              '이미 장바구니에 해당 상품의 모든 재고가 담겨 있습니다.'),
+                                                          backgroundColor:
+                                                              Colors.redAccent,
+                                                        ),
+                                                      );
+                                                      return;
+                                                    }
+                                                    showDialog(
                                                       context: context,
                                                       builder: (_) =>
                                                           ProductDetailDialog(
-                                                        product: product,
+                                                        product: product.copyWith(
+                                                            stock:
+                                                                availableToOrder),
                                                         onAddCart: (quantity) {
                                                           final existing = cart
                                                               .firstWhereOrNull(
@@ -1000,7 +1100,8 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                                           });
                                                         },
                                                       ),
-                                                    )
+                                                    );
+                                                  }
                                                 : null,
                                           );
                                         },

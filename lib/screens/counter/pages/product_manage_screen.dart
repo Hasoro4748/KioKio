@@ -194,7 +194,7 @@ class _ProductManageScreenState extends ConsumerState<ProductManageScreen> {
               onPressed: () {
                 ref
                     .read(settingsProvider.notifier)
-                    .updateProductGridCount(current);
+                    .updateProductManageGridCount(current);
                 Navigator.pop(context);
               },
               child: const Text('적용'),

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kiosk/db/dao/filter_dao.dart';
 import 'package:kiosk/db/dao/image_dao.dart';
@@ -11,6 +14,7 @@ import 'package:kiosk/providers/database_provider.dart';
 import 'package:kiosk/providers/pos_network_service_provider.dart';
 import 'package:kiosk/providers/product_service_provider.dart';
 import 'package:kiosk/sevices/product_service.dart';
+import 'package:path/path.dart' as p;
 
 final productProvider =
     AsyncNotifierProvider<ProductNotifier, List<ProductModel>>(
@@ -35,28 +39,47 @@ class ProductNotifier extends AsyncNotifier<List<ProductModel>> {
 
   Future<void> addProduct(ProductModel product) async {
     await _service.addProduct(product);
-    _broadcastSync(SyncAction.create, [product]);
+    await _broadcastSync(SyncAction.create, [product]);
     await reload();
   }
 
   Future<void> updateProduct(ProductModel product) async {
     await _service.updateProduct(product);
-    _broadcastSync(SyncAction.update, [product]);
+    await _broadcastSync(SyncAction.update, [product]);
     await reload();
   }
 
   Future<void> deleteProduct(int id) async {
     final productToDelete = (state.value ?? []).firstWhere((p) => p.id == id);
     await _service.deleteProduct(id);
-    _broadcastSync(SyncAction.delete, [productToDelete]);
+    await _broadcastSync(SyncAction.delete, [productToDelete]);
     await reload();
   }
 
-  void _broadcastSync(SyncAction action, List<ProductModel> products) {
+  Future<void> _broadcastSync(
+      SyncAction action, List<ProductModel> products) async {
     try {
       final posService = ref.read(posNetworkServiceProvider.notifier);
+      Map<String, String> imageDatas = {};
+      if (action != SyncAction.delete) {
+        for (var product in products) {
+          for (var img in product.images) {
+            final file = File(img.imagePath);
+            if (await file.exists()) {
+              final fileName = p.basename(img.imagePath);
+              final bytes = await file.readAsBytes();
+              imageDatas[fileName] = base64Encode(bytes);
+            }
+          }
+        }
+      }
+
       posService.broadcastProductSync(
-        ProductSyncMessage(action: action, products: products),
+        ProductSyncMessage(
+          action: action,
+          products: products,
+          imageDatas: imageDatas.isNotEmpty ? imageDatas : null, // 이미지 데이터 추가!
+        ),
       );
     } catch (e) {
       print("동기화 브로드캐스트 실패: $e");

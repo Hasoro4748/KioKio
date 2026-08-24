@@ -10,6 +10,14 @@ import 'package:kiosk/utils/responsive.dart';
 import 'package:kiosk/utils/text_util.dart';
 import 'package:collection/collection.dart';
 
+class _ProductStat {
+  int quantity;
+  int unitPrice;
+  int total;
+  _ProductStat(
+      {required this.quantity, required this.unitPrice, required this.total});
+}
+
 class OrderTotalScreen extends ConsumerStatefulWidget {
   // 클래스명 변경
   const OrderTotalScreen({super.key});
@@ -21,6 +29,32 @@ class OrderTotalScreen extends ConsumerStatefulWidget {
 class _OrderTotalScreenState extends ConsumerState<OrderTotalScreen> {
   String _selectedPeriod = '오늘';
   bool _showThemeDistribution = true; // true: 테마별, false: 판매자별
+  bool _showRevenueDist = true;
+
+  DateTimeRange? _selectedDateRange;
+
+  Future<void> _pickDateRange() async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: _selectedDateRange,
+      firstDate: DateTime(2023),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+      locale: const Locale('ko', 'KR'),
+      builder: (context, child) => Theme(
+        data: ThemeData.light().copyWith(
+            colorScheme:
+                const ColorScheme.light(primary: PageColors.cateSelect)),
+        child: child!,
+      ),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDateRange = picked;
+        _selectedPeriod = '사용자설정';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,8 +69,14 @@ class _OrderTotalScreenState extends ConsumerState<OrderTotalScreen> {
             style: TextStyle(fontWeight: FontWeight.w900)),
         actions: [
           _buildPeriodChip('오늘'),
+          _buildPeriodChip('어제'),
           _buildPeriodChip('7일'),
           _buildPeriodChip('한달'),
+          IconButton(
+            onPressed: _pickDateRange,
+            icon: Icon(Icons.date_range,
+                color: _selectedPeriod == '사용자설정' ? Colors.blue : Colors.grey),
+          ),
           const SizedBox(width: 12),
         ],
       ),
@@ -60,32 +100,58 @@ class _OrderTotalScreenState extends ConsumerState<OrderTotalScreen> {
 
   Widget _buildBodyContent(
       List<OrderModel> orders, List<ProductModel> products, Responsive rs) {
+    String periodInfo = _selectedPeriod;
+    if (_selectedPeriod == '사용자설정' && _selectedDateRange != null) {
+      periodInfo =
+          "${DateFormat('MM.dd').format(_selectedDateRange!.start)} ~ ${DateFormat('MM.dd').format(_selectedDateRange!.end)}";
+    }
+
     return SingleChildScrollView(
       padding: EdgeInsets.all(rs.padding(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12, left: 4),
+            child: Text('📊 분석 기간: $periodInfo',
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueGrey)),
+          ),
           _buildSummaryCards(orders, rs),
           const SizedBox(height: 24),
+
+          // 3. 분포 분석 영역 (수량 기반 vs 매출액 기반 나란히 배치)
           rs.isDesktop || rs.isTablet
               ? Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(flex: 6, child: _buildTopProductsCard(orders, rs)),
-                    const SizedBox(width: 16),
+                    // 왼쪽: 수량 기반 분포
                     Expanded(
-                        flex: 4,
-                        child: _buildDistributionCard(orders, products, rs)),
+                        child: _buildDistributionCard(orders, products, rs,
+                            isRevenue: false)),
+                    const SizedBox(width: 16),
+                    // 오른쪽: 매출액 기반 분포
+                    Expanded(
+                        child: _buildDistributionCard(orders, products, rs,
+                            isRevenue: true)),
                   ],
                 )
               : Column(
                   children: [
-                    _buildTopProductsCard(orders, rs),
+                    _buildDistributionCard(orders, products, rs,
+                        isRevenue: false),
                     const SizedBox(height: 16),
-                    _buildDistributionCard(orders, products, rs),
+                    _buildDistributionCard(orders, products, rs,
+                        isRevenue: true),
                   ],
                 ),
-          const SizedBox(height: 100),
+          const SizedBox(height: 24),
+
+          // 2. 인기 상품 순위 (전체 너비로 확장하여 가독성 강화)
+          _buildTopProductsCard(orders, rs),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -93,8 +159,8 @@ class _OrderTotalScreenState extends ConsumerState<OrderTotalScreen> {
 
   // 테마/판매자 분포 분석 카드 (핵심 수정 부분)
   Widget _buildDistributionCard(
-      List<OrderModel> orders, List<ProductModel> products, Responsive rs) {
-    // 1. 상품 ID별 테마/판매자 맵핑 데이터 생성
+      List<OrderModel> orders, List<ProductModel> products, Responsive rs,
+      {required bool isRevenue}) {
     final Map<int, List<String>> themeMap = {
       for (var p in products) p.id: p.themes
     };
@@ -102,52 +168,62 @@ class _OrderTotalScreenState extends ConsumerState<OrderTotalScreen> {
       for (var p in products) p.id: p.sellers
     };
 
-    // 2. 분포 집계
+    // 현재 카드에서 테마를 볼지 판매자를 볼지 결정하는 내부 상태
+    final bool currentShowTheme =
+        isRevenue ? _showRevenueDist : _showThemeDistribution;
+
     final Map<String, int> distribution = {};
-    int totalTargetQuantity = 0;
+    int totalValue = 0; // 전체 수량 또는 전체 금액
 
     for (var o in orders) {
       for (var item in o.items) {
-        final List<String> targets = _showThemeDistribution
+        final List<String> targets = currentShowTheme
             ? (themeMap[item.productId] ?? ['기타'])
             : (sellerMap[item.productId] ?? ['기타']);
 
         for (var target in targets) {
-          distribution.update(target, (val) => val + item.quantity,
-              ifAbsent: () => item.quantity);
-          totalTargetQuantity += item.quantity;
+          // 수량 기반이면 item.quantity를, 매출 기반이면 item.totalPrice를 더함
+          final int increment = isRevenue ? item.totalPrice : item.quantity;
+          distribution.update(target, (val) => val + increment,
+              ifAbsent: () => increment);
+          totalValue += increment;
         }
       }
     }
 
-    // 상위 5개 추출 및 비율 계산
     final sortedEntries = distribution.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final displayEntries = sortedEntries.take(5).toList();
 
     return _buildDashboardSection(
-      title: '판매 분포 분석',
-      icon: Icons.pie_chart_rounded,
-      // 상단 스위치 추가
+      title: isRevenue ? '매출액 분포 분석' : '판매 수량 분포 분석',
+      icon: isRevenue ? Icons.monetization_on_rounded : Icons.pie_chart_rounded,
       action: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildSmallToggle('테마', _showThemeDistribution,
-              () => setState(() => _showThemeDistribution = true)),
+          _buildSmallToggle('테마', currentShowTheme, () {
+            setState(() => isRevenue
+                ? _showRevenueDist = true
+                : _showThemeDistribution = true);
+          }),
           const SizedBox(width: 4),
-          _buildSmallToggle('판매자', !_showThemeDistribution,
-              () => setState(() => _showThemeDistribution = false)),
+          _buildSmallToggle('판매자', !currentShowTheme, () {
+            setState(() => isRevenue
+                ? _showRevenueDist = false
+                : _showThemeDistribution = false);
+          }),
         ],
       ),
       child: Column(
         children: displayEntries.isEmpty
-            ? [const Center(child: Text('집계할 데이터가 없습니다.'))]
+            ? [const Center(child: Text('데이터가 없습니다.'))]
             : displayEntries.map((e) {
-                double percent = totalTargetQuantity > 0
-                    ? (e.value / totalTargetQuantity)
-                    : 0;
-                return _buildCustomProgressBar(e.key, percent,
-                    _showThemeDistribution ? Colors.indigo : Colors.teal);
+                double percent = totalValue > 0 ? (e.value / totalValue) : 0;
+                String labelSuffix = isRevenue
+                    ? ' (${TextUtil.money(e.value)}원)'
+                    : ' (${e.value}개)';
+                return _buildCustomProgressBar(e.key + labelSuffix, percent,
+                    isRevenue ? Colors.deepPurple : Colors.indigo);
               }).toList(),
       ),
     );
@@ -212,14 +288,33 @@ class _OrderTotalScreenState extends ConsumerState<OrderTotalScreen> {
   // --- 데이터 필터링 로직 ---
   List<OrderModel> _getFilteredOrders(List<OrderModel> orders) {
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
     return orders.where((o) {
       if (o.status != '승인') return false;
 
-      final diff = now.difference(o.createdAt).inDays;
-      if (_selectedPeriod == '오늘')
-        return diff == 0 && o.createdAt.day == now.day;
+      final orderDate = o.createdAt;
+      final orderDay = DateTime(orderDate.year, orderDate.month, orderDate.day);
+
+      // 사용자 설정 기간
+      if (_selectedPeriod == '사용자설정' && _selectedDateRange != null) {
+        return orderDate.isAfter(_selectedDateRange!.start
+                .subtract(const Duration(seconds: 1))) &&
+            orderDate
+                .isBefore(_selectedDateRange!.end.add(const Duration(days: 1)));
+      }
+
+      // 어제 필터
+      if (_selectedPeriod == '어제') return orderDay.isAtSameMomentAs(yesterday);
+
+      // 오늘 필터
+      if (_selectedPeriod == '오늘') return orderDay.isAtSameMomentAs(today);
+
+      final diff = now.difference(orderDate).inDays;
       if (_selectedPeriod == '7일') return diff <= 7;
       if (_selectedPeriod == '한달') return diff <= 30;
+
       return true;
     }).toList();
   }

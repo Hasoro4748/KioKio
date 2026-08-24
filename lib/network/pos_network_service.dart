@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:bonsoir/bonsoir.dart';
+import 'package:kiosk/models/kiosk_setting_model.dart';
 import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/network/pos_network_status.dart';
 import 'package:kiosk/network/productSyncMessage.dart';
@@ -167,5 +168,21 @@ class PosNetworkService extends StateNotifier<PosNetworkState> {
     } catch (e) {
       print("전체 동기화 전송 실패: $e");
     }
+  }
+
+  void broadcastKioskSettings(KioskSettingsModel settings,
+      {Map<String, String>? imageDatas}) {
+    final message = {
+      'type': 'KIOSK_SETTINGS_SYNC',
+      'settings': settings.toJson(),
+      'imageDatas': imageDatas, // 로고 이미지 파일 포함 (Base64)
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    final jsonMessage = jsonEncode(message);
+    for (var client in _clients) {
+      client.sink.add(jsonMessage);
+    }
+    print("키오스크 설정 동기화 메시지 전송 완료");
   }
 }

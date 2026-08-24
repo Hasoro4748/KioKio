@@ -55,14 +55,15 @@ class ProductService {
         final fileName = p.basename(img.imagePath);
         return img.copyWith(imagePath: p.join(localImageDir.path, fileName));
       }).toList();
-
+      final localProduct = product.copyWith(images: localImages);
       switch (action) {
         case 'initial':
         case 'create':
-          await repository.addProduct(product.copyWith(images: localImages));
+          await repository.addProduct(localProduct);
           break;
         case 'update':
-          await repository.updateProduct(product);
+          await repository
+              .updateProduct(localProduct); // ◀ 수정됨: localProduct 사용
           break;
         case 'delete':
           await repository.deleteProduct(product.id);

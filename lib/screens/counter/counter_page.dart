@@ -7,6 +7,7 @@ import 'package:kiosk/providers/pos_network_service_provider.dart';
 import 'package:kiosk/screens/counter/pages/order_total_screen.dart';
 import 'package:kiosk/screens/counter/pages/pos_screen.dart';
 import 'package:kiosk/screens/counter/pages/product_manage_screen.dart';
+import 'package:kiosk/screens/counter/pages/product_settlement_screen.dart';
 import 'package:kiosk/screens/counter/pages/settings_screen.dart';
 import 'package:kiosk/screens/counter/widgets/draggable_fab.dart';
 import 'package:kiosk/screens/counter/widgets/order_detail_dialog.dart';
@@ -58,6 +59,7 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
       const PosScreen(),
       const OrderManageScreen(),
       const OrderTotalScreen(),
+      const ProductSettlementScreen(),
       const ProductManageScreen(),
       const SettingsScreen(),
     ];
@@ -152,65 +154,68 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                     Container(
                       width: 110,
                       decoration: BoxDecoration(
-                        // PageColors.cateBack을 배경으로 사용하여 전체 테마와 통일감 부여
                         color: PageColors.cateBack,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(2, 0),
-                          ),
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(2, 0))
                         ],
                       ),
                       child: Column(
                         children: [
-                          const SizedBox(height: 40),
-                          // 로고 아이콘 색상을 테마의 짙은 남색으로 변경
+                          const SizedBox(height: 30), // 상단 여백 축소 (40 -> 30)
                           const Icon(Icons.storefront,
-                              color: PageColors.textBlue, size: 36),
-                          const SizedBox(height: 40),
+                              color: PageColors.textBlue, size: 32), // 로고 크기 축소
+                          const SizedBox(height: 30),
 
-                          // 메뉴 리스트
+                          // 1. 메뉴 리스트를 스크롤 가능하게 감쌉니다.
                           Expanded(
-                            child: Column(
-                              children: [
-                                _buildNavButton(0, Icons.point_of_sale, 'POS'),
-                                _buildNavButton(1, Icons.receipt_long, '주문관리'),
-                                _buildNavButton(2, Icons.history, '주문통계'),
-                                _buildNavButton(
-                                    3, Icons.inventory_2_outlined, '상품관리'),
-                                _buildNavButton(4, Icons.settings, '환경설정'),
-                              ],
+                            child: SingleChildScrollView(
+                              physics: const BouncingScrollPhysics(),
+                              child: Column(
+                                children: [
+                                  _buildNavButton(
+                                      0, Icons.point_of_sale, 'POS'),
+                                  _buildNavButton(
+                                      1, Icons.receipt_long, '주문관리'),
+                                  _buildNavButton(
+                                      2, Icons.analytics_outlined, '주문통계'),
+                                  _buildNavButton(
+                                      3, Icons.assessment_outlined, '판매정산'),
+                                  _buildNavButton(
+                                      4, Icons.inventory_2_outlined, '상품관리'),
+                                  _buildNavButton(5, Icons.settings, '환경설정'),
+                                ],
+                              ),
                             ),
                           ),
 
-                          // 하단 시스템 제어 영역
+                          // 2. 하단 시스템 제어 영역 (최소한의 공간만 차지하도록 수정)
                           Container(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              // 하단 영역을 살짝 더 어두운 톤으로 구분
                               color: PageColors.theme.withOpacity(0.3),
                               borderRadius: const BorderRadius.vertical(
                                   top: Radius.circular(24)),
                             ),
                             child: Column(
+                              mainAxisSize: MainAxisSize.min, // 추가
                               children: [
                                 _buildServerControl(
                                     isBroadcasting, connectedCount),
-                                const SizedBox(height: 20),
+                                const SizedBox(height: 12), // 간격 축소 (20 -> 12)
                                 _buildSideIconButton(
                                   icon: Icons.home_rounded,
-                                  // 기본 텍스트 블루 색상 활용
                                   color: PageColors.textBlue.withOpacity(0.8),
                                   tooltip: '메인화면',
                                   onTap: () {
                                     Navigator.pushAndRemoveUntil(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) =>
-                                              const ModelSelectionScreen()),
-                                      (route) => false,
-                                    );
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const ModelSelectionScreen()),
+                                        (route) => false);
                                   },
                                 ),
                               ],
@@ -261,53 +266,25 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
           ? null
           : BottomNavigationBar(
               currentIndex: currentIndex,
-              onTap: (index) {
-                setState(() {
-                  currentIndex = index;
-                });
-              },
+              onTap: (index) => setState(() => currentIndex = index),
               type: BottomNavigationBarType.fixed,
+              selectedFontSize: 10,
+              unselectedFontSize: 10,
               items: const [
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.point_of_sale),
-                  label: 'POS',
-                ),
+                    icon: Icon(Icons.point_of_sale), label: 'POS'),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.receipt_long),
-                  label: '주문관리',
-                ),
+                    icon: Icon(Icons.receipt_long), label: '주문관리'),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.history),
-                  label: '주문통계',
-                ),
+                    icon: Icon(Icons.analytics_outlined), label: '주문통계'),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.inventory_2_outlined),
-                  label: '상품관리',
-                ),
+                    icon: Icon(Icons.assessment_outlined), label: '판매정산'), // 추가
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.settings),
-                  label: '환경설정',
-                ),
+                    icon: Icon(Icons.inventory_2_outlined), label: '상품관리'),
+                BottomNavigationBarItem(
+                    icon: Icon(Icons.settings), label: '설정'),
               ],
             ),
-      // floatingActionButton: FloatingActionButton.extended(
-      //   onPressed: () => _showPendingOrders(
-      //     pendingOrders,
-      //     rs,
-      //   ),
-      //   backgroundColor: pendingOrders.isEmpty || isPendingLoading
-      //       ? PageColors.themeSelect
-      //       : Colors.orange,
-      //   icon: const Icon(Icons.notifications_active),
-      //   label: isPendingLoading
-      //       ? const CircularProgressIndicator()
-      //       : Text(
-      //           '${pendingOrders.length} 건',
-      //           style: const TextStyle(
-      //             fontWeight: FontWeight.bold,
-      //           ),
-      //         ),
-      // ),
     );
   }
 
@@ -468,14 +445,12 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
       onTap: () => setState(() => currentIndex = index),
       child: Container(
         width: double.infinity,
-        height: 85,
+        height: 75, // 버튼 높이 축소 (85 -> 75)
         decoration: BoxDecoration(
-          // 선택 시 왼쪽 바를 짙은 남색(cateSelect)으로 표시
           border: isSelected
               ? const Border(
                   left: BorderSide(color: PageColors.cateSelect, width: 5))
               : null,
-          // 선택 시 배경을 아주 연한 블루(buttonBack)로 변경
           color: isSelected
               ? PageColors.buttonBack.withOpacity(0.5)
               : Colors.transparent,
@@ -485,22 +460,21 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
           children: [
             Icon(
               icon,
-              // 선택 시 짙은 남색, 비선택 시 부드러운 회색빛 블루
               color: isSelected
                   ? PageColors.cateSelect
                   : PageColors.textBlue.withOpacity(0.5),
-              size: 28,
+              size: 24, // 아이콘 크기 축소 (28 -> 24)
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6), // 간격 축소 (8 -> 6)
             Text(
               label,
               style: TextStyle(
                 color: isSelected
                     ? PageColors.cateSelect
                     : PageColors.textBlue.withOpacity(0.6),
-                fontSize: 13,
+                fontSize: 12, // 폰트 크기 축소 (13 -> 12)
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500,
-                fontFamily: 'GmarketSans', // 테마 폰트 적용
+                fontFamily: 'GmarketSans',
               ),
             ),
           ],

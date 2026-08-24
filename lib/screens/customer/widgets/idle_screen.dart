@@ -1,33 +1,45 @@
+import 'dart:io'; // File 클래스를 위해 추가
 import 'package:flutter/material.dart';
 import 'package:kiosk/theme/common_theme.dart';
 
 class IdleScreen extends StatelessWidget {
   final VoidCallback onStart;
-  const IdleScreen({super.key, required this.onStart});
+  final String welcomeMessage;
+  final String logoPath; // 1. 로고 경로 필드 추가
+
+  const IdleScreen({
+    super.key,
+    required this.onStart,
+    required this.welcomeMessage,
+    required this.logoPath, // 생성자 추가
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: PageColors.cateBack,
       body: InkWell(
-        // 화면 어디든 터치하면 시작
         onTap: onStart,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/icon/appIcon2.png', width: 200),
+              // 2. 로고 표시 로직 적용 (asset vs file 분기)
+              SizedBox(
+                width: 250,
+                child: logoPath.isEmpty
+                    ? Image.asset('assets/img/logo/logo1.png') // 기본 로고
+                    : (logoPath.startsWith('assets/')
+                        ? Image.asset(logoPath)
+                        : Image.file(File(logoPath))), // 원격에서 받은 로고
+              ),
               const SizedBox(height: 40),
-              const Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                child: const Text(
-                  textAlign: TextAlign.center,
-                  '터치하여 주문을 시작하세요',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold),
-                ),
+              Text(
+                welcomeMessage,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
               const Text('Touch to start ordering',
