@@ -40,7 +40,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -55,6 +55,24 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 4) {
           await m.addColumn(orders, orders.discount as GeneratedColumn<Object>);
+        }
+        if (from < 5) {
+          await m.addColumn(
+              products, products.isSet as GeneratedColumn<Object>);
+          await m.addColumn(
+              products, products.componentIds as GeneratedColumn<Object>);
+        }
+        if (from < 6) {
+          await m.addColumn(
+              products, products.displayOrder as GeneratedColumn<Object>);
+        }
+        if (from < 7) {
+          await m.addColumn(
+              themes, themes.displayOrder as GeneratedColumn<Object>);
+          await m.addColumn(
+              categories, categories.displayOrder as GeneratedColumn<Object>);
+          await m.addColumn(
+              sellers, sellers.displayOrder as GeneratedColumn<Object>);
         }
       });
 

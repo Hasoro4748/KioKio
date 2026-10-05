@@ -105,23 +105,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: Column(
           children: [
             // 1. POS 관리 설정 섹션
-            _buildSection(
-              title: 'POS 관리 화면 설정',
-              icon: Icons.monitor,
-              children: [
-                _buildSliderTile(
-                  label: '상품 관리 그리드 개수',
-                  value: settings.productManageGridCount.toDouble(),
-                  min: 5,
-                  max: 10,
-                  onChanged: (val) => ref
-                      .read(settingsProvider.notifier)
-                      .updateProductManageGridCount(val.toInt()),
-                  trailing: '${settings.productManageGridCount}개',
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
+            // _buildSection(
+            //   title: 'POS 관리 화면 설정',
+            //   icon: Icons.monitor,
+            //   children: [
+            //     _buildSliderTile(
+            //       label: '상품 관리 그리드 개수',
+            //       value: settings.productManageGridCount.toDouble(),
+            //       min: 5,
+            //       max: 10,
+            //       onChanged: (val) => ref
+            //           .read(settingsProvider.notifier)
+            //           .updateProductManageGridCount(val.toInt()),
+            //       trailing: '${settings.productManageGridCount}개',
+            //     ),
+            //   ],
+            // ),
+            // const SizedBox(height: 24),
 
             // 2. 원격 키오스크 제어 섹션
             _buildSection(

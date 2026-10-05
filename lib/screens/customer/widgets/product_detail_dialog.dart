@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kiosk/models/product_model.dart';
+import 'package:kiosk/providers/product_providers.dart';
 import 'package:kiosk/screens/customer/widgets/product_image_slider.dart';
 import 'package:kiosk/theme/common_theme.dart';
+import 'package:kiosk/utils/kiosk_helper.dart';
 import 'package:kiosk/utils/responsive.dart';
 import 'package:kiosk/utils/text_util.dart';
 
-class ProductDetailDialog extends StatefulWidget {
+class ProductDetailDialog extends ConsumerStatefulWidget {
   final ProductModel product;
   final Function(int quantity) onAddCart;
 
@@ -16,10 +19,11 @@ class ProductDetailDialog extends StatefulWidget {
   });
 
   @override
-  State<ProductDetailDialog> createState() => _ProductDetailDialogState();
+  ConsumerState<ProductDetailDialog> createState() =>
+      _ProductDetailDialogState();
 }
 
-class _ProductDetailDialogState extends State<ProductDetailDialog> {
+class _ProductDetailDialogState extends ConsumerState<ProductDetailDialog> {
   int quantity = 1;
   bool _showStockError = false;
 
@@ -33,11 +37,11 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
       insetPadding: EdgeInsets.all(rs.padding(16)),
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(rs.radius(24))),
-      clipBehavior: Clip.antiAlias, // 다이얼로그 모서리 밖으로 컨텐츠 안나가게
+      clipBehavior: Clip.antiAlias,
       child: Container(
         width: isMobile ? rs.w(0.95) : rs.w(0.7),
-        height: isMobile ? rs.h(0.85) : rs.h(0.65),
-        constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 700),
+        height: isMobile ? rs.h(0.85) : rs.h(0.75),
+        constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 750),
         child: isMobile
             ? _buildMobileLayout(context, rs, product)
             : _buildDesktopLayout(context, rs, product),
@@ -69,13 +73,15 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
 
   Widget _buildImageSection(Responsive rs, ProductModel product) {
     return Container(
-      color: const Color(0xFFF9F9F9), // 연한 회색 배경
+      color: const Color(0xFFF9F9F9),
       child: Center(child: ProductImagesSlider(images: product.images)),
     );
   }
 
   Widget _buildInfoSection(
       BuildContext context, Responsive rs, ProductModel product) {
+    final allProducts = ref.watch(productProvider).value ?? [];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -96,15 +102,37 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 상품명
-                Text(
-                  product.name,
-                  style: TextStyle(
-                    fontSize: rs.font(26),
-                    fontWeight: FontWeight.w900,
-                    fontFamily: 'GmarketSans',
-                  ),
+                Row(
+                  children: [
+                    if (product.isSet)
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[800],
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text('세트',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12)),
+                      ),
+                    Expanded(
+                      child: Text(
+                        product.name,
+                        style: TextStyle(
+                          fontSize: rs.font(26),
+                          fontWeight: FontWeight.w900,
+                          fontFamily: 'GmarketSans',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
+
                 // 가격
                 Text(
                   '${TextUtil.money(product.basePrice)}원',
@@ -114,7 +142,17 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 24),
+
+                // ★ A. 세트 상품일 때: 구성품 및 할인 혜택 카드 노출
+                if (product.isSet)
+                  _buildSetComponentSection(context, rs, product, allProducts),
+
+                // ★ B. 단품일 때: 이 상품이 포함된 세트 메뉴 추천 배너 노출 (2단계 신규 기능)
+                if (!product.isSet)
+                  _buildSetRecommendationSection(
+                      context, rs, product, allProducts),
+
+                const SizedBox(height: 16),
                 // 설명
                 if (product.description.isNotEmpty)
                   Text(
@@ -185,13 +223,292 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
     );
   }
 
+  /// ★ [2단계 신규 기능] 단품 선택 시 연관 세트 메뉴 추천 제안 배너 위젯
+  Widget _buildSetRecommendationSection(BuildContext context, Responsive rs,
+      ProductModel product, List<ProductModel> allProducts) {
+    // 현재 단품(product.id)을 구성품으로 포함하고 있는 세트 상품 탐색
+    final matchingSets = allProducts
+        .where((p) => p.isSet && p.componentIds.contains(product.id))
+        .toList();
+
+    if (matchingSets.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: matchingSets.map((setProduct) {
+        // 세트 구성품들의 단품 가격 합계 계산
+        final components = allProducts
+            .where((p) => setProduct.componentIds.contains(p.id))
+            .toList();
+        final int totalSinglePrice =
+            components.fold(0, (sum, comp) => sum + comp.basePrice);
+        final int discountAmount = totalSinglePrice - setProduct.basePrice;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.blue.shade300, width: 1.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.lightbulb_rounded,
+                      color: Colors.amber, size: 20),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '이 상품이 포함된 세트 메뉴가 있어요!',
+                      style: TextStyle(
+                        fontSize: rs.font(13),
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[900],
+                      ),
+                    ),
+                  ),
+                  if (discountAmount > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[700],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${TextUtil.money(discountAmount)}원 절약',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: KioskHelper.imageTypeBuilder(
+                        setProduct.thumbnail,
+                        BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          setProduct.name,
+                          style: TextStyle(
+                            fontSize: rs.font(14),
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '세트 특가 ${TextUtil.money(setProduct.basePrice)}원',
+                          style: TextStyle(
+                            fontSize: rs.font(12),
+                            color: PageColors.price,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context); // 현재 단품 팝업 닫기
+                      showDialog(
+                        context: context,
+                        builder: (_) => ProductDetailDialog(
+                          product: setProduct,
+                          onAddCart: widget.onAddCart,
+                        ),
+                      ); // 세트 상품 팝업 오픈
+                    },
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                    label: const Text('세트 보기', style: TextStyle(fontSize: 12)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: PageColors.cateSelect,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  /// 세트 구성품 목록 및 할인 혜택 카드 위젯
+  Widget _buildSetComponentSection(BuildContext context, Responsive rs,
+      ProductModel product, List<ProductModel> allProducts) {
+    if (product.componentIds.isEmpty) return const SizedBox.shrink();
+
+    final components =
+        allProducts.where((p) => product.componentIds.contains(p.id)).toList();
+    final int totalSinglePrice =
+        components.fold(0, (sum, item) => sum + item.basePrice);
+    final int discountAmount = totalSinglePrice - product.basePrice;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.amber[50],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.amber.shade300, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.takeout_dining_rounded,
+                  color: Colors.orange, size: 22),
+              const SizedBox(width: 8),
+              Text(
+                '세트 구성품 (${components.length}종)',
+                style: TextStyle(
+                  fontSize: rs.font(15),
+                  fontWeight: FontWeight.bold,
+                  color: Colors.brown[900],
+                ),
+              ),
+              const Spacer(),
+              if (discountAmount > 0)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${TextUtil.money(discountAmount)}원 할인',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Column(
+            children: components.map((comp) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: KioskHelper.imageTypeBuilder(
+                          comp.thumbnail,
+                          BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        comp.name,
+                        style: TextStyle(
+                          fontSize: rs.font(14),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '단품 ${TextUtil.money(comp.basePrice)}원',
+                      style: TextStyle(
+                        fontSize: rs.font(12),
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+          if (discountAmount > 0) ...[
+            const Divider(height: 20, color: Colors.amber),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('단품 각각 구매 시',
+                    style: TextStyle(
+                        fontSize: rs.font(13), color: Colors.grey[700])),
+                Text(
+                  '${TextUtil.money(totalSinglePrice)}원',
+                  style: TextStyle(
+                    fontSize: rs.font(14),
+                    color: Colors.grey[600],
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '세트 특가',
+                  style: TextStyle(
+                    fontSize: rs.font(15),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown[900],
+                  ),
+                ),
+                Text(
+                  '${TextUtil.money(product.basePrice)}원',
+                  style: TextStyle(
+                    fontSize: rs.font(18),
+                    fontWeight: FontWeight.w900,
+                    color: PageColors.price,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   // 수량 조절 위젯
   Widget _buildQuantityControl(Responsive rs, ProductModel product) {
     return Column(
-      // Row를 Column으로 감싸서 아래에 경고 문구 추가
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- 재고 부족 경고 문구 (스낵바 대체) ---
         if (_showStockError)
           Padding(
             padding: const EdgeInsets.only(top: 8, left: 4),
@@ -207,7 +524,6 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
           decoration: BoxDecoration(
             color: Colors.grey[100],
             borderRadius: BorderRadius.circular(12),
-            // 에러가 있을 때 테두리를 빨간색으로 강조 (선택 사항)
             border: _showStockError
                 ? Border.all(color: Colors.redAccent, width: 1.5)
                 : null,
@@ -222,7 +538,7 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
                     ? () {
                         setState(() {
                           quantity--;
-                          _showStockError = false; // 수량 줄이면 에러 문구 해제
+                          _showStockError = false;
                         });
                       }
                     : null,
@@ -246,7 +562,6 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
                       _showStockError = false;
                     });
                   } else {
-                    // --- 스낵바 대신 내부 상태를 갱신 ---
                     setState(() {
                       _showStockError = true;
                     });

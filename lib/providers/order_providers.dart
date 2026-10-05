@@ -63,6 +63,12 @@ class OrderNotifier extends AsyncNotifier<List<OrderModel>> {
     await reload();
   }
 
+  Future<void> updateOrderDiscount(OrderModel order, int discount) async {
+    if (order.id == null) return;
+    await _service.updateOrderDiscount(order.id!, discount);
+    await reload(); // 데이터 다시 불러와서 UI 갱신
+  }
+
   Future<void> _syncRestoredProducts(OrderModel order) async {
     try {
       // 최신화된 전체 상품 리스트 가져오기

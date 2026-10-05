@@ -36,3 +36,14 @@ final filterDaoProvider = Provider<FilterDao>((ref) {
   final db = ref.watch(databaseProvider);
   return FilterDao(db);
 });
+final orderedThemesProvider = FutureProvider<List<String>>((ref) async {
+  return ref.watch(filterDaoProvider).getThemes();
+});
+
+final orderedSellersProvider = FutureProvider<List<String>>((ref) async {
+  return ref.watch(filterDaoProvider).getSellers();
+});
+
+final orderedCategoriesProvider = FutureProvider<List<String>>((ref) async {
+  return ref.watch(filterDaoProvider).getCategories();
+});

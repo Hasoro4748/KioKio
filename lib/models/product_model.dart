@@ -17,6 +17,8 @@ class ProductModel {
 
   final String description;
 
+  final int displayOrder;
+
   final int stock;
 
   final bool isAvailable;
@@ -24,6 +26,8 @@ class ProductModel {
   final DateTime createdAt;
 
   final DateTime updatedAt;
+  final bool isSet;
+  final List<int> componentIds;
 
   ProductModel({
     required this.id,
@@ -38,6 +42,9 @@ class ProductModel {
     required this.isAvailable,
     required this.createdAt,
     required this.updatedAt,
+    this.displayOrder = 0,
+    this.isSet = false,
+    this.componentIds = const [],
   });
 
   bool get canOrder => isAvailable && stock > 0;
@@ -53,9 +60,12 @@ class ProductModel {
     List<ProductImageModel>? images,
     String? description,
     int? stock,
+    int? displayOrder,
     bool? isAvailable,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? isSet,
+    List<int>? componentIds,
   }) {
     return ProductModel(
       id: id ?? this.id,
@@ -67,9 +77,12 @@ class ProductModel {
       images: images ?? this.images,
       description: description ?? this.description,
       stock: stock ?? this.stock,
+      displayOrder: displayOrder ?? this.displayOrder,
       isAvailable: isAvailable ?? this.isAvailable,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isSet: isSet ?? this.isSet, // 추가
+      componentIds: componentIds ?? this.componentIds, // 추가
     );
   }
 
@@ -93,14 +106,17 @@ class ProductModel {
         'name': name,
         'basePrice': basePrice,
         'description': description,
+        'displayOrder': displayOrder, // ★ 추가
         'stock': stock,
         'isAvailable': isAvailable,
         'themes': themes,
         'sellers': sellers,
         'categories': categories,
-        'images': images.map((e) => e.toJson()).toList(), // 리스트 직렬화
+        'images': images.map((e) => e.toJson()).toList(),
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
+        'isSet': isSet,
+        'componentIds': componentIds,
       };
 
   factory ProductModel.fromJson(Map<String, dynamic> json) => ProductModel(
@@ -108,6 +124,7 @@ class ProductModel {
         name: json['name'],
         basePrice: json['basePrice'],
         description: json['description'],
+        displayOrder: json['displayOrder'] ?? 0, // ★ 추가
         stock: json['stock'],
         isAvailable: json['isAvailable'],
         themes: List<String>.from(json['themes']),
@@ -118,5 +135,7 @@ class ProductModel {
             .toList(),
         createdAt: DateTime.parse(json['createdAt']),
         updatedAt: DateTime.parse(json['updatedAt']),
+        isSet: json['isSet'],
+        componentIds: List<int>.from(json['componentIds']),
       );
 }

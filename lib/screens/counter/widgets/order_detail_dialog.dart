@@ -1,7 +1,9 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:kiosk/models/order_model.dart';
+import 'package:kiosk/providers/order_providers.dart';
 import 'package:kiosk/screens/counter/widgets/status_color.dart';
 import 'package:kiosk/theme/common_theme.dart';
 import 'package:kiosk/utils/responsive.dart';
@@ -25,245 +27,350 @@ class OrderDetailDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ordersAsync = ref.watch(orderProvider);
+    final currentOrder = ordersAsync.maybeWhen(
+      data: (list) => list.firstWhereOrNull((o) => o.id == order.id) ?? order,
+      orElse: () => order,
+    );
     return Dialog(
       backgroundColor: Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SizedBox(
-        width: rs.isMobile ? rs.w(0.9) : rs.w(0.45), // 너비 축소
-        height: rs.h(0.75),
-        child: Column(
-          children: [
-            /// 상단 헤더 영역 (컴팩트하게 수정)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16), // 24 -> 16
-              decoration: BoxDecoration(
-                color: statusBackgroundColor(order.status).withOpacity(0.08),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
+      // 1. 전체 테두리 둥글기 강화 (16 -> 24)
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: SizedBox(
+          width: rs.isMobile ? rs.w(0.9) : rs.w(0.45),
+          height: rs.h(0.8), // 높이를 살짝 키워 할인 영역 확보
+          child: Column(
+            children: [
+              // --- 3. 헤더 영역 개선 ---
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
+                decoration: BoxDecoration(
+                  // 상태별 배경색을 연하게 깔아줌
+                  color: statusColor(order.status).withOpacity(0.05),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: statusColor(order.status),
+                                borderRadius:
+                                    BorderRadius.circular(8), // 배지도 둥글게
+                              ),
+                              child: Text(
+                                order.status,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              '주문번호 No. ${order.id}',
+                              style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: PageColors.textBlue,
+                                  fontFamily: 'GmarketSans'),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close_rounded,
+                              size: 24, color: PageColors.textBlue),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time_rounded,
+                            size: 14, color: Colors.grey),
+                        const SizedBox(width: 6),
+                        Text(
+                          '주문일시: ${DateFormat('yyyy.MM.dd HH:mm:ss').format(order.createdAt)}',
+                          style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
+
+              // --- 4. 리스트 헤더 (모서리 없이 깔끔하게) ---
+              Container(
+                color: Colors.grey[50],
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                child: Row(
+                  children: const [
+                    Expanded(
+                        flex: 3,
+                        child: Text('상품명',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueGrey))),
+                    Expanded(
+                        child: Text('단가',
+                            textAlign: TextAlign.end,
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueGrey))),
+                    Expanded(
+                        child: Text('수량',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueGrey))),
+                    Expanded(
+                        child: Text('금액',
+                            textAlign: TextAlign.end,
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueGrey))),
+                  ],
+                ),
+              ),
+
+              // --- 5. 주문 품목 리스트 ---
+              Expanded(
+                child: ListView.separated(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  itemCount: order.items.length,
+                  separatorBuilder: (context, index) =>
+                      Divider(height: 1, color: Colors.grey[100]),
+                  itemBuilder: (context, index) {
+                    final item = order.items[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: statusColor(order.status),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
+                          Expanded(
+                              flex: 3,
+                              child: Text(item.name,
+                                  style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87))),
+                          Expanded(
+                              child: Text(TextUtil.money(item.unitPrice),
+                                  textAlign: TextAlign.end,
+                                  style: const TextStyle(
+                                      fontSize: 14, color: Colors.grey))),
+                          Expanded(
+                              child: Text('${item.quantity}',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold))),
+                          Expanded(
                             child: Text(
-                              order.status,
+                              TextUtil.money(item.totalPrice),
+                              textAlign: TextAlign.end,
                               style: const TextStyle(
-                                  color: Colors.white,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 11),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'No. ${order.id}',
-                            style: const TextStyle(
-                              fontSize: 16, // 20 -> 16
-                              fontWeight: FontWeight.w900,
-                              color: PageColors.textBlue,
-                              fontFamily: 'GmarketSans',
+                                  color: PageColors.price),
                             ),
                           ),
                         ],
                       ),
-                      IconButton(
-                        constraints: const BoxConstraints(),
-                        padding: EdgeInsets.zero,
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close,
-                            size: 20, color: PageColors.textBlue),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '주문일시: ${DateFormat('yyyy.MM.dd HH:mm:ss').format(order.createdAt)}',
-                    style: TextStyle(
-                        color: PageColors.textBlue.withOpacity(0.5),
-                        fontSize: 12),
-                  ),
-                ],
+                    );
+                  },
+                ),
               ),
-            ),
 
-            /// 주문 품목 헤더 (폰트 및 높이 축소)
-            Container(
-              color: PageColors.buttonBack.withOpacity(0.2),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: const [
-                  Expanded(
-                      flex: 3,
-                      child: Text('상품명',
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: PageColors.textBlue))),
-                  Expanded(
-                      child: Text('단가',
-                          textAlign: TextAlign.end,
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: PageColors.textBlue))),
-                  Expanded(
-                      child: Text('수량',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: PageColors.textBlue))),
-                  Expanded(
-                      child: Text('금액',
-                          textAlign: TextAlign.end,
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: PageColors.textBlue))),
-                ],
-              ),
-            ),
-
-            /// 주문 품목 리스트 (간격 축소)
-            Expanded(
-              child: ListView.separated(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                itemCount: order.items.length,
-                separatorBuilder: (context, index) =>
-                    Divider(height: 1, color: Colors.grey.shade100),
-                itemBuilder: (context, index) {
-                  final item = order.items[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Row(
+              // --- 6. 하단 정보 및 버튼 영역 ---
+              Container(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    _buildPriceDetailRow(
+                        '상품 합계', currentOrder.subTotalPrice, rs),
+                    if (currentOrder.discount > 0)
+                      _buildPriceDetailRow('할인 금액', -currentOrder.discount, rs,
+                          color: Colors.red),
+                    const Divider(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        const Text('최종 결제 금액'),
+                        Text(
+                          '${TextUtil.money(currentOrder.totalPrice)}원',
+                          style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              color: DefaultColors.red,
+                              fontFamily: 'GmarketSans'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        // 삭제 버튼
+                        Container(
+                          decoration: BoxDecoration(
+                              color: Colors.red[50],
+                              borderRadius: BorderRadius.circular(12)),
+                          child: IconButton(
+                            onPressed: onDelete,
+                            icon: const Icon(Icons.delete_forever_rounded,
+                                color: DefaultColors.red, size: 24),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // [추가] 할인 버튼
+                        if ((order.status == '처리중'))
+                          SizedBox(
+                            width: 80,
+                            child: OutlinedButton(
+                              onPressed: () => _showDiscountDialog(
+                                  context, ref, currentOrder),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: order.discount > 0
+                                    ? Colors.red
+                                    : PageColors.cateSelect,
+                                side: BorderSide(
+                                    color: order.discount > 0
+                                        ? Colors.red
+                                        : PageColors.cateSelect,
+                                    width: 1.5),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
+                              ),
+                              child: Text(
+                                  currentOrder.discount > 0 ? '할인중' : '할인'),
+                            ),
+                          ),
+                        const SizedBox(width: 12),
+
                         Expanded(
-                            flex: 3,
-                            child: Text(item.name,
-                                style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500))),
+                          child: OutlinedButton(
+                            onPressed:
+                                (order.status == '처리중' || order.status == '승인')
+                                    ? onCancel
+                                    : null,
+                            // ... 취소 버튼 스타일 유지 ...
+                            child: Text('주문 취소',
+                                style: TextStyle(
+                                    color: order.status == '취소'
+                                        ? Colors.grey
+                                        : Colors.red,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
                         Expanded(
-                            child: Text(TextUtil.money(item.unitPrice),
-                                textAlign: TextAlign.end,
-                                style: const TextStyle(fontSize: 13))),
-                        Expanded(
-                            child: Text('${item.quantity}',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontSize: 13))),
-                        Expanded(
-                          child: Text(
-                            TextUtil.money(item.totalPrice),
-                            textAlign: TextAlign.end,
-                            style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: PageColors.price),
+                          child: ElevatedButton(
+                            onPressed: order.status == '처리중' ? onApprove : null,
+                            child: const Text('주문 승인',
+                                style: TextStyle(
+                                    fontSize: 15, fontWeight: FontWeight.bold)),
                           ),
                         ),
                       ],
                     ),
-                  );
-                },
+                  ],
+                ),
               ),
-            ),
-
-            /// 하단 결제 정보 및 액션 버튼 (컴팩트하게 수정)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Colors.grey.shade100)),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('최종 결제 금액',
-                          style: TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.bold)),
-                      Text(
-                        '${TextUtil.money(order.totalPrice)}원',
-                        style: const TextStyle(
-                          fontSize: 22, // 26 -> 22
-                          fontWeight: FontWeight.w900,
-                          color: DefaultColors.red,
-                          fontFamily: 'GmarketSans',
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      // 삭제 버튼을 아이콘 버튼으로 작게 배치하거나 텍스트 버튼으로 변경
-                      IconButton(
-                        onPressed: onDelete,
-                        icon: const Icon(Icons.delete_outline,
-                            color: DefaultColors.red, size: 22),
-                        tooltip: '주문 삭제',
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed:
-                              (order.status == '처리중' || order.status == '승인')
-                                  ? onCancel
-                                  : null,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: DefaultColors.red,
-                            side: const BorderSide(color: DefaultColors.red),
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 12), // 16 -> 12
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: const Text('주문 취소',
-                              style: TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: order.status == '처리중' ? onApprove : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: PageColors.cateSelect,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 12), // 16 -> 12
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: const Text('주문 승인',
-                              style: TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  void _showDiscountDialog(
+      BuildContext context, WidgetRef ref, OrderModel latestOrder) {
+    final controller = TextEditingController(
+        text: latestOrder.discount > 0 ? latestOrder.discount.toString() : '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('할인 금액 수정'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration:
+              const InputDecoration(suffixText: '원', hintText: '할인할 금액 입력'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              ref
+                  .read(orderProvider.notifier)
+                  .updateOrderDiscount(latestOrder, 0);
+              Navigator.pop(ctx);
+            },
+            child: const Text('할인 취소', style: TextStyle(color: Colors.red)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              int amount = int.tryParse(controller.text) ?? 0;
+              if (amount > latestOrder.subTotalPrice) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('할인액이 주문 합계보다 클 수 없습니다.')));
+                return;
+              }
+              ref
+                  .read(orderProvider.notifier)
+                  .updateOrderDiscount(latestOrder, amount);
+              Navigator.pop(ctx);
+            },
+            child: const Text('적용'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceDetailRow(String label, int amount, Responsive rs,
+      {Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500)),
+          Text('${TextUtil.money(amount)}원',
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: color ?? Colors.black87)),
+        ],
       ),
     );
   }

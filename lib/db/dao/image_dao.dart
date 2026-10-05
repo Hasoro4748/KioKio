@@ -6,7 +6,10 @@ class ImageDao {
 
   ImageDao(this.db);
 
-  ///
+  Future<List<ProductImage>> getAllImages() {
+    return db.select(db.productImages).get();
+  }
+
   Future<List<ProductImage>> getByProductId(int productId) {
     return (db.select(db.productImages)
           ..where((i) => i.productId.equals(productId))

@@ -12,13 +12,17 @@ final appDatabase = AppDatabase();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 이미지 캐싱 용량 조정
+  PaintingBinding.instance.imageCache.maximumSize = 200;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 300 * 1024 * 1024;
+
   //저장된 설정 정보 가져오기
   final prefs = await SharedPreferences.getInstance();
 
   SystemChrome.setEnabledSystemUIMode(
     SystemUiMode.immersiveSticky,
   );
-  await appDatabase.seedProducts();
+  // await appDatabase.seedProducts();
 
   runApp(
     ProviderScope(

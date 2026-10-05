@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,9 +7,11 @@ import 'package:kiosk/models/product_image_model.dart';
 import 'package:kiosk/models/product_model.dart';
 import 'package:kiosk/providers/dao_provider.dart';
 import 'package:kiosk/providers/product_providers.dart';
+import 'package:kiosk/screens/counter/widgets/image_crop_dialog.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:kiosk/theme/common_theme.dart';
+import 'package:kiosk/utils/image_util.dart';
 
 class ProductEditDialog extends ConsumerStatefulWidget {
   final ProductModel product;
@@ -25,7 +28,10 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
   late TextEditingController _stockController;
   late TextEditingController _descController;
 
-  final List<dynamic> _images = []; // ProductImageModel 또는 File 객체 유지
+  dynamic _thumbnailImage; // ProductImageModel 또는 File (크롭 썸네일)
+  File? _thumbnailOriginalFile; // 썸네일 크롭 전 원본 파일
+  final List<dynamic> _detailImages = []; // ProductImageModel 또는 File 리스트
+
   final ImagePicker _picker = ImagePicker();
 
   List<String> _selectedThemes = [];
@@ -45,7 +51,15 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
     _descController = TextEditingController(text: widget.product.description);
     _isAvailable = widget.product.isAvailable;
 
-    _images.addAll(widget.product.images);
+    // 이미지 분리 로드
+    final thumb =
+        widget.product.images.firstWhereOrNull((img) => img.isThumbnail);
+    _thumbnailImage = thumb ?? widget.product.images.firstOrNull;
+
+    final details =
+        widget.product.images.where((img) => !img.isThumbnail).toList();
+    _detailImages.addAll(details);
+
     _selectedThemes = List.from(widget.product.themes);
     _selectedSellers = List.from(widget.product.sellers);
     _selectedCategories = List.from(widget.product.categories);
@@ -60,10 +74,55 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
+  /// 1. 새로운 썸네일 지정 (크롭 수행 + 원본을 상세 이미지 목록에 자동 삽입)
+  Future<void> _pickThumbnailImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+
+    final File originalFile = File(image.path);
+    final croppedFile = await ImageCropDialog.cropFile(context, originalFile);
+
+    if (croppedFile != null) {
+      setState(() {
+        _thumbnailImage = croppedFile;
+        _thumbnailOriginalFile = originalFile;
+
+        // 원본 이미지가 상세 이미지 목록에 없다면 맨 앞에 추가
+        if (!_detailImages.contains(originalFile)) {
+          _detailImages.insert(0, originalFile);
+        }
+      });
+    }
+  }
+
+  /// 썸네일 재크롭
+  Future<void> _recropThumbnail() async {
+    File? sourceFile;
+    if (_thumbnailOriginalFile != null) {
+      sourceFile = _thumbnailOriginalFile;
+    } else if (_thumbnailImage is ProductImageModel) {
+      sourceFile = File((_thumbnailImage as ProductImageModel).imagePath);
+    } else if (_thumbnailImage is File) {
+      sourceFile = _thumbnailImage as File;
+    }
+
+    if (sourceFile != null && await sourceFile.exists()) {
+      final croppedFile = await ImageCropDialog.cropFile(context, sourceFile);
+      if (croppedFile != null) {
+        setState(() {
+          _thumbnailImage = croppedFile;
+        });
+      }
+    }
+  }
+
+  /// 2. 상세 정보용 이미지 여러 장 추가
+  Future<void> _pickDetailImages() async {
     final List<XFile> images = await _picker.pickMultiImage();
     if (images.isNotEmpty) {
-      setState(() => _images.addAll(images.map((e) => File(e.path))));
+      setState(() {
+        _detailImages.addAll(images.map((e) => File(e.path)));
+      });
     }
   }
 
@@ -75,23 +134,44 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
     if (!await productDir.exists()) await productDir.create();
 
     List<ProductImageModel> finalImageModels = [];
-    for (int i = 0; i < _images.length; i++) {
-      final img = _images[i];
+
+    // 1. 썸네일 처리
+    if (_thumbnailImage is ProductImageModel) {
+      finalImageModels.add((_thumbnailImage as ProductImageModel)
+          .copyWith(sortOrder: 0, isThumbnail: true));
+    } else if (_thumbnailImage is File) {
+      final fileName = 'thumb_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final localPath = p.join(productDir.path, fileName);
+      await ImageUtil.compressAndSave(_thumbnailImage as File, localPath);
+
+      finalImageModels.add(ProductImageModel(
+        id: 0,
+        productId: widget.product.id,
+        imagePath: localPath,
+        isThumbnail: true,
+        sortOrder: 0,
+        createdAt: DateTime.now(),
+      ));
+    }
+
+    // 2. 상세 이미지들 처리
+    for (int i = 0; i < _detailImages.length; i++) {
+      final img = _detailImages[i];
       if (img is ProductImageModel) {
-        // 기존 이미지: 순서와 썸네일 여부만 갱신하여 유지
-        finalImageModels.add(img.copyWith(sortOrder: i, isThumbnail: i == 0));
+        finalImageModels
+            .add(img.copyWith(sortOrder: i + 1, isThumbnail: false));
       } else if (img is File) {
-        // 새 이미지: 로컬 복사 후 모델 생성
         final fileName =
-            '${DateTime.now().millisecondsSinceEpoch}_${p.basename(img.path)}';
+            'detail_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
         final localPath = p.join(productDir.path, fileName);
-        await img.copy(localPath);
+        await ImageUtil.compressAndSave(img, localPath);
+
         finalImageModels.add(ProductImageModel(
           id: 0,
           productId: widget.product.id,
           imagePath: localPath,
-          isThumbnail: i == 0,
-          sortOrder: i,
+          isThumbnail: false,
+          sortOrder: i + 1,
           createdAt: DateTime.now(),
         ));
       }
@@ -110,9 +190,7 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
       updatedAt: DateTime.now(),
     );
 
-    // Notifier를 통해 DB 업데이트 및 실시간 동기화 브로드캐스트 실행
     await ref.read(productProvider.notifier).updateProduct(updatedProduct);
-
     if (mounted) Navigator.pop(context);
   }
 
@@ -121,7 +199,7 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
       labelText: label,
       prefixIcon: Icon(icon, size: 20, color: PageColors.cateSelect),
       filled: true,
-      fillColor: const Color(0xFFF8F9FA), // 아주 연한 회색 배경 추가
+      fillColor: const Color(0xFFF8F9FA),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(color: Colors.grey.shade300),
@@ -144,7 +222,7 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
 
     return AlertDialog(
       backgroundColor: Colors.white,
-      surfaceTintColor: Colors.white, // 다이얼로그 틴트 제거로 흰색 유지
+      surfaceTintColor: Colors.white,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -168,8 +246,6 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
               children: [
                 _buildImageSection(),
                 const SizedBox(height: 24),
-
-                // 상품명 입력 필드
                 TextFormField(
                   controller: _nameController,
                   decoration:
@@ -178,8 +254,6 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
                   validator: (v) => v!.isEmpty ? '이름을 입력하세요' : null,
                 ),
                 const SizedBox(height: 16),
-
-                // 가격 및 재고 입력 필드
                 Row(
                   children: [
                     Expanded(
@@ -205,8 +279,6 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
                   ],
                 ),
                 const SizedBox(height: 16),
-
-                // 판매 상태 스위치 (디자인 개선)
                 Container(
                   decoration: BoxDecoration(
                     color: _isAvailable
@@ -236,12 +308,8 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
                     onChanged: (v) => setState(() => _isAvailable = v),
                   ),
                 ),
-
                 const Divider(),
-
-                // 분류 정보 섹션 (배경 추가)
                 _buildTagRow(filterDao),
-
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _descController,
@@ -264,56 +332,186 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
   }
 
   Widget _buildImageSection() {
+    ImageProvider? thumbProvider;
+    if (_thumbnailImage is ProductImageModel) {
+      thumbProvider =
+          FileImage(File((_thumbnailImage as ProductImageModel).imagePath));
+    } else if (_thumbnailImage is File) {
+      thumbProvider = FileImage(_thumbnailImage as File);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('상품 이미지 관리 (첫 번째 사진이 썸네일)',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        // 1. 썸네일 영역
+        Row(
+          children: const [
+            Icon(Icons.crop_square_rounded, color: Colors.orange, size: 18),
+            SizedBox(width: 6),
+            Text('상품 썸네일 이미지',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            if (thumbProvider != null)
+              Stack(
+                children: [
+                  Container(
+                    width: 110,
+                    height: 110,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange, width: 2),
+                      image: DecorationImage(
+                          image: thumbProvider, fit: BoxFit.cover),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 6,
+                    left: 6,
+                    child: GestureDetector(
+                      onTap: _recropThumbnail,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.crop, color: Colors.white, size: 12),
+                            SizedBox(width: 4),
+                            Text('재조정',
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 10)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _thumbnailImage = null),
+                      child: const CircleAvatar(
+                        radius: 10,
+                        backgroundColor: Colors.red,
+                        child: Icon(Icons.close, size: 12, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              InkWell(
+                onTap: _pickThumbnailImage,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border:
+                        Border.all(color: Colors.orange.shade300, width: 1.5),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.add_a_photo_outlined,
+                          color: Colors.orange, size: 28),
+                      SizedBox(height: 6),
+                      Text('썸네일 등록',
+                          style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+
+        const SizedBox(height: 20),
+
+        // 2. 상세 정보 이미지 영역
+        Row(
+          children: const [
+            Icon(Icons.collections_outlined, color: Colors.blue, size: 18),
+            SizedBox(width: 6),
+            Text('상세 페이지 이미지',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          ],
+        ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 100,
+          height: 95,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            itemCount: _images.length + 1,
+            itemCount: _detailImages.length + 1,
             itemBuilder: (context, index) {
-              if (index == _images.length) {
-                return GestureDetector(
-                  onTap: _pickImage,
+              if (index == _detailImages.length) {
+                return InkWell(
+                  onTap: _pickDetailImages,
+                  borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    width: 100,
+                    width: 95,
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8)),
-                    child: const Icon(Icons.add_a_photo, color: Colors.grey),
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.add_photo_alternate_outlined,
+                            color: Colors.grey, size: 24),
+                        SizedBox(height: 4),
+                        Text('사진 추가',
+                            style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      ],
+                    ),
                   ),
                 );
               }
-              final img = _images[index];
+
+              final img = _detailImages[index];
+              ImageProvider detailProvider;
+              if (img is ProductImageModel) {
+                detailProvider = FileImage(File(img.imagePath));
+              } else {
+                detailProvider = FileImage(img as File);
+              }
+
               return Stack(
                 children: [
                   Container(
-                    width: 100,
+                    width: 95,
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
                       image: DecorationImage(
-                          image: img is ProductImageModel
-                              ? FileImage(File(img.imagePath)) // 로컬 경로 이미지
-                              : FileImage(img as File), // 새로 선택한 이미지
-                          fit: BoxFit.cover),
+                          image: detailProvider, fit: BoxFit.cover),
                     ),
                   ),
                   Positioned(
                     right: 12,
                     top: 4,
                     child: GestureDetector(
-                      onTap: () => setState(() => _images.removeAt(index)),
+                      onTap: () =>
+                          setState(() => _detailImages.removeAt(index)),
                       child: const CircleAvatar(
-                          radius: 10,
-                          backgroundColor: Colors.red,
-                          child:
-                              Icon(Icons.close, size: 12, color: Colors.white)),
+                        radius: 10,
+                        backgroundColor: Colors.red,
+                        child: Icon(Icons.close, size: 12, color: Colors.white),
+                      ),
                     ),
                   ),
                 ],
@@ -339,8 +537,7 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
   }
 
   Widget _buildManageableSection(String title, Future<List<String>> future,
-      List<String> selectedList, IconData icon // 아이콘 추가
-      ) {
+      List<String> selectedList, IconData icon) {
     return FutureBuilder<List<String>>(
       future: future,
       builder: (context, snapshot) {
@@ -351,14 +548,13 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Icon(icon, size: 18, color: PageColors.cateSelect), // 제목 옆 아이콘
+                Icon(icon, size: 18, color: PageColors.cateSelect),
                 const SizedBox(width: 8),
                 Text(title,
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 14)),
                 const Spacer(),
                 TextButton.icon(
-                  // 직접입력 버튼 가시성 강화
                   onPressed: () => _showAddTagDialog(title, selectedList),
                   icon: const Icon(Icons.add, size: 14),
                   label: const Text('직접입력', style: TextStyle(fontSize: 12)),
@@ -368,10 +564,9 @@ class _ProductEditDialogState extends ConsumerState<ProductEditDialog> {
               ],
             ),
             const SizedBox(height: 6),
-            // 드롭다운에도 _inputDecoration 스타일 적용
             DropdownButtonFormField<String>(
               decoration: _inputDecoration('$title 선택', icon).copyWith(
-                prefixIcon: null, // 타이틀에 이미 아이콘이 있으므로 제거
+                prefixIcon: null,
                 hintText: '$title을 선택하세요',
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

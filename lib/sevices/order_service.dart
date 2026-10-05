@@ -20,21 +20,34 @@ class OrderService {
   Future<void> addOrder(OrderModel order) async {
     try {
       for (var item in order.items) {
+        // 상세 정보를 가져와서 isSet 여부 확인
         final product =
-            await productRepository.getProductSimple(item.productId);
+            await productRepository.getProductDetail(item.productId);
 
         if (product != null) {
-          int newStock = product.stock - item.quantity;
-          if (newStock < 0) newStock = 0;
-
-          await productRepository.updateStock(product.id, newStock);
+          if (product.isSet && product.componentIds.isNotEmpty) {
+            // [중요] 세트 상품이면 구성품들 재고를 수량만큼 차감
+            for (var subId in product.componentIds) {
+              await _updateStockValue(subId, -item.quantity);
+            }
+          } else {
+            // 일반 상품이면 본인 재고만 차감
+            await _updateStockValue(product.id, -item.quantity);
+          }
         }
       }
-
       return repository.addOrder(order);
     } catch (e) {
       print("주문 처리중 오류 발생 : $e");
       rethrow;
+    }
+  }
+
+  Future<void> _updateStockValue(int id, int amount) async {
+    final p = await productRepository.getProductSimple(id);
+    if (p != null) {
+      await productRepository.updateStock(
+          id, (p.stock + amount).clamp(0, 99999).toInt());
     }
   }
 
@@ -70,19 +83,26 @@ class OrderService {
   Future<void> cancelOrderStatus(OrderModel order) async {
     try {
       for (var item in order.items) {
+        // 1. 상품 상세 정보를 가져와서 세트 여부 확인 (중요)
         final product =
-            await productRepository.getProductSimple(item.productId);
+            await productRepository.getProductDetail(item.productId);
 
         if (product != null) {
-          int newStock = product.stock + item.quantity;
-          if (newStock < 0) newStock = 0;
-
-          await productRepository.updateStock(product.id, newStock);
+          // 2. 세트 상품인 경우: 모든 구성품의 재고를 주문 수량만큼 다시 늘림 (+)
+          if (product.isSet && product.componentIds.isNotEmpty) {
+            for (var subId in product.componentIds) {
+              await _updateStockValue(subId, item.quantity); // + 수량
+            }
+          }
+          // 3. 일반 상품인 경우: 본인 재고만 늘림
+          else {
+            await _updateStockValue(product.id, item.quantity);
+          }
         }
       }
       return repository.cancelOrderState(order);
     } catch (e) {
-      print("주문 처리중 오류 발생 : $e");
+      print("주문 취소 처리중 오류 발생 : $e");
       rethrow;
     }
   }
@@ -90,22 +110,31 @@ class OrderService {
   /// 주문 삭제
   Future<void> deleteOrder(OrderModel order) async {
     try {
-      for (var item in order.items) {
-        final product =
-            await productRepository.getProductSimple(item.productId);
+      if (order.status != "취소") {
+        for (var item in order.items) {
+          final product =
+              await productRepository.getProductDetail(item.productId);
 
-        if (product != null && order.status != "취소") {
-          int newStock = product.stock + item.quantity;
-          if (newStock < 0) newStock = 0;
-
-          await productRepository.updateStock(product.id, newStock);
+          if (product != null) {
+            if (product.isSet && product.componentIds.isNotEmpty) {
+              for (var subId in product.componentIds) {
+                await _updateStockValue(subId, item.quantity);
+              }
+            } else {
+              await _updateStockValue(product.id, item.quantity);
+            }
+          }
         }
       }
       return repository.deleteOrder(order);
     } catch (e) {
-      print("주문 처리중 오류 발생 : $e");
+      print("주문 삭제 처리중 오류 발생 : $e");
       rethrow;
     }
+  }
+
+  Future<void> updateOrderDiscount(int orderId, int discount) async {
+    await repository.updateOrderDiscount(orderId, discount);
   }
 
   static Future<File> _getFile() async {

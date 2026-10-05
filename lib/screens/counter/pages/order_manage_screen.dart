@@ -73,7 +73,13 @@ class _OrderManageScreenState extends ConsumerState<OrderManageScreen>
                   flex: 6,
                   child: _selectedOrder == null
                       ? _buildEmptyDetailView()
-                      : _buildDetailView(context, _selectedOrder!, rs),
+                      : Builder(
+                          builder: (context) {
+                            final order = _selectedOrder;
+                            if (order == null) return _buildEmptyDetailView();
+                            return _buildDetailView(context, order, rs);
+                          },
+                        ),
                 ),
               ],
             );
@@ -387,9 +393,18 @@ class _OrderManageScreenState extends ConsumerState<OrderManageScreen>
       builder: (ctx) => OrderDetailDialog(
         order: order,
         rs: rs,
-        onDelete: () => ref.read(orderProvider.notifier).deleteOrder(order),
-        onCancel: () => ref.read(orderProvider.notifier).cancelOrder(order),
-        onApprove: () => ref.read(orderProvider.notifier).approveOrder(order),
+        onDelete: () async {
+          await ref.read(orderProvider.notifier).deleteOrder(order);
+          if (ctx.mounted) Navigator.pop(ctx); // ★ 다이얼로그 닫기
+        },
+        onCancel: () async {
+          await ref.read(orderProvider.notifier).cancelOrder(order);
+          if (ctx.mounted) Navigator.pop(ctx); // ★ 다이얼로그 닫기
+        },
+        onApprove: () async {
+          await ref.read(orderProvider.notifier).approveOrder(order);
+          if (ctx.mounted) Navigator.pop(ctx); // ★ 다이얼로그 닫기
+        },
       ),
     );
   }

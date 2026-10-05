@@ -24,7 +24,7 @@ class KioskHelper {
 
   static ImageProvider getImageProvider(String? path) {
     if (path == null || path.isEmpty) {
-      return const AssetImage('assets/img/unit/no_image.png'); // 기본 이미지
+      return const AssetImage('assets/img/unit/no_image.png');
     }
     if (path.startsWith('assets/')) {
       return AssetImage(path);
@@ -34,21 +34,36 @@ class KioskHelper {
 
   static Widget imageTypeBuilder(String? path, BoxFit boxFit) {
     if (path == null || path.isEmpty) {
-      return Image.asset(
-        'assets/img/unit/no_image.png',
-        fit: boxFit,
-      );
+      return Image.asset('assets/img/unit/no_image.png', fit: boxFit);
     }
     if (path.startsWith('assets/')) {
-      return Image.asset(
-        path,
-        fit: boxFit,
-      );
+      return Image.asset(path, fit: boxFit);
     }
+
     return Image.file(
       File(path),
+      cacheWidth: 300, // 메모리 낭비 방지를 위한 디코딩 해상도 제한
       fit: boxFit,
-      errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+      // 파일이 없거나 디코딩 실패 시 비동기로 처리하여 메인 스레드 멈춤 방지
+      errorBuilder: (_, __, ___) =>
+          Image.asset('assets/img/unit/no_image.png', fit: boxFit),
+    );
+  }
+
+  static Widget imageTypeDetailBuilder(String? path, BoxFit boxFit) {
+    if (path == null || path.isEmpty) {
+      return Image.asset('assets/img/unit/no_image.png', fit: boxFit);
+    }
+    if (path.startsWith('assets/')) {
+      return Image.asset(path, fit: boxFit);
+    }
+
+    return Image.file(
+      File(path),
+      cacheWidth: 800,
+      fit: boxFit,
+      errorBuilder: (_, __, ___) =>
+          Image.asset('assets/img/unit/no_image.png', fit: boxFit),
     );
   }
 

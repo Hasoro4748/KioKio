@@ -6,13 +6,17 @@ import 'package:kiosk/models/kiosk_setting_model.dart';
 import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/network/pos_network_status.dart';
 import 'package:kiosk/network/productSyncMessage.dart';
+import 'package:kiosk/providers/dao_provider.dart';
 import 'package:kiosk/providers/order_providers.dart';
 import 'package:kiosk/providers/product_providers.dart';
+import 'package:kiosk/providers/product_service_provider.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_web_socket/shelf_web_socket.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
+import 'package:shelf/shelf.dart';
 
 class PosNetworkService extends StateNotifier<PosNetworkState> {
   PosNetworkService(this.ref)
@@ -37,7 +41,7 @@ class PosNetworkService extends StateNotifier<PosNetworkState> {
     state = state.copyWith(status: PosBroadcastStatus.starting);
 
     try {
-      var handler = webSocketHandler(
+      var wsHandler = webSocketHandler(
         (WebSocketChannel webSocket) {
           _clients.add(webSocket);
           _updateConnectionCount();
@@ -63,6 +67,26 @@ class PosNetworkService extends StateNotifier<PosNetworkState> {
           });
         },
       );
+      final handler = Cascade()
+          .add((Request request) async {
+            // /images/ 경로로 들어오는 요청 처리
+            if (request.url.path.startsWith('images/')) {
+              final fileName = p.basename(request.url.path);
+              // 실제 이미지가 저장된 로컬 경로 확보
+              final appDir = await getApplicationDocumentsDirectory();
+              final file =
+                  File(p.join(appDir.path, 'product_images', fileName));
+
+              if (await file.exists()) {
+                return Response.ok(file.openRead(), headers: {
+                  'Content-Type': 'image/jpeg',
+                });
+              }
+            }
+            return Response.notFound('Not Found');
+          })
+          .add(wsHandler)
+          .handler;
 
       _server =
           await io.serve(handler, InternetAddress.anyIPv4, 8080, shared: true);
@@ -140,31 +164,28 @@ class PosNetworkService extends StateNotifier<PosNetworkState> {
 
   Future<void> syncAllProducts() async {
     try {
-      final currentProducts = ref.read(productProvider).value ?? [];
-      Map<String, String> imageDatas = {};
-      if (currentProducts.isEmpty) {
-        print("동기화할 상품이 없습니다.");
-        return;
-      }
+      final productService = ref.read(productServiceProvider);
+      final filterDao = ref.read(filterDaoProvider);
 
-      for (var product in currentProducts) {
-        for (var image in product.images) {
-          final file = File(image.imagePath);
-          if (await file.exists()) {
-            final fileName = p.basename(image.imagePath);
-            final bytes = await file.readAsBytes();
-            imageDatas[fileName] = base64Encode(bytes);
-          }
-        }
-      }
+      // ★ DB에서 최신 상품 목록과 테마/카테고리 순서를 직접 안전하게 읽어옵니다.
+      final currentProducts = await productService.loadProducts();
+      final themesOrder = await filterDao.getThemes();
+      final categoriesOrder = await filterDao.getCategories();
+      final sellersOrder = await filterDao.getSellers();
 
       final syncMessage = ProductSyncMessage(
-          action: SyncAction.initial,
-          products: currentProducts,
-          imageDatas: imageDatas);
+        action: SyncAction.initial,
+        products: currentProducts,
+        themesOrder: themesOrder,
+        categoriesOrder: categoriesOrder,
+        sellersOrder: sellersOrder,
+        imageDatas: {},
+      );
 
+      // ★ 키오스크로 동기화 전송
       broadcastProductSync(syncMessage);
-      print("모든 클라이언트에게 ${currentProducts.length}개의 상품 동기화 메시지 전송");
+      print(
+          "모든 클라이언트에게 ${currentProducts.length}개 상품 및 테마/분류 순서 동기화 메시지 전송 성공!");
     } catch (e) {
       print("전체 동기화 전송 실패: $e");
     }

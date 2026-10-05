@@ -36,7 +36,6 @@ class ModelSelectionScreen extends ConsumerWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      SizedBox(height: rs.h(0.02)),
                       // 로고 영역
                       Container(
                         padding: EdgeInsets.all(rs.padding(24)),
@@ -106,7 +105,7 @@ class ModelSelectionScreen extends ConsumerWidget {
                       ),
                       SizedBox(height: rs.h(0.03)),
 
-                      _buildAdminPanel(context, ref, db, rs),
+                      //_buildAdminPanel(context, ref, db, rs),
                     ],
                   ),
                 ),

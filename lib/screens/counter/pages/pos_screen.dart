@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/models/product_model.dart';
+import 'package:kiosk/providers/dao_provider.dart';
 import 'package:kiosk/providers/order_providers.dart';
 import 'package:kiosk/providers/product_providers.dart';
 import 'package:kiosk/theme/common_theme.dart';
@@ -22,6 +23,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   List<OrderItemModel> cart = [];
   GroupingType _currentGrouping = GroupingType.theme;
   int _discountAmount = 0;
+  double? _customItemExtent;
 
   void _addToCart(ProductModel product, {bool isService = false}) {
     setState(() {
@@ -43,6 +45,63 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         ));
       }
     });
+  }
+
+  List<String> sortTagsByMasterOrder(
+      List<String> tags, List<String> masterOrder) {
+    final list = List<String>.from(tags);
+    list.sort((a, b) {
+      int indexA = masterOrder.indexOf(a);
+      int indexB = masterOrder.indexOf(b);
+      if (indexA == -1) indexA = 999;
+      if (indexB == -1) indexB = 999;
+      return indexA.compareTo(indexB);
+    });
+    return list;
+  }
+
+  void _showDisplaySettings() {
+    final rs = Responsive(context);
+    // 추천 너비 범위: 80(매우 작게) ~ 250(크게)
+    double min = 80;
+    double max = 250;
+    double current =
+        (_customItemExtent ?? (rs.isMobile ? 120.0 : 150.0)).clamp(min, max);
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('상품 목록 크기 설정'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('슬라이더를 조절하여 상품 카드의 크기를 변경하세요.'),
+              Slider(
+                value: current, min: min, max: max,
+                divisions: 17, // 10단위로 조절
+                label: '${current.toInt()}px',
+                onChanged: (val) => setDialogState(() => current = val),
+              ),
+              Text(current < 120
+                  ? '촘촘하게 보기'
+                  : (current > 200 ? '크게 보기' : '적당하게 보기')),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소')),
+            ElevatedButton(
+                onPressed: () {
+                  setState(() => _customItemExtent = current);
+                  Navigator.pop(context);
+                },
+                child: const Text('적용')),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _checkout() async {
@@ -74,6 +133,11 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   Widget build(BuildContext context) {
     final rs = Responsive(context);
     final productsAsync = ref.watch(productProvider);
+    double itemExtent = _customItemExtent ?? (rs.isMobile ? 110.0 : 160.0);
+
+    final masterThemes = ref.watch(orderedThemesProvider).value ?? [];
+    final masterCategories = ref.watch(orderedCategoriesProvider).value ?? [];
+    final masterSellers = ref.watch(orderedSellersProvider).value ?? [];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -119,38 +183,55 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               }
             }
           }
-          final sortedKeys = groupedProducts.keys.toList()..sort();
+          List<String> currentMasterList = [];
+          switch (_currentGrouping) {
+            case GroupingType.theme:
+              currentMasterList = masterThemes;
+              break;
+            case GroupingType.seller:
+              currentMasterList = masterSellers;
+              break;
+            case GroupingType.category:
+              currentMasterList = masterCategories;
+              break;
+          }
+
+          final sortedKeys = sortTagsByMasterOrder(
+              groupedProducts.keys.toList(), currentMasterList);
 
           if (rs.isMobile) {
             return Column(
               children: [
-                // 1. 상단 상품 영역 (약 55%)
+                // 1. 상단 상품 목록 (장바구니가 비어있으면 100% 전체 화면 사용)
                 Expanded(
-                  flex: 55,
                   child: _buildProductList(
-                      sortedKeys, groupedProducts, 3), // 3열로 더 촘촘하게
+                      sortedKeys, groupedProducts, itemExtent),
                 ),
-                // 2. 하단 주문 영역 (약 45% - 절반가량 차지)
-                Container(
-                  height: MediaQuery.of(context).size.height * 0.45,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, -4)),
-                    ],
+
+                // 2. 하단 주문 영역 (★ cart.isNotEmpty 일 때만 활성화)
+                if (cart.isNotEmpty)
+                  Container(
+                    height: MediaQuery.of(context).size.height * 0.45,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, -4)),
+                      ],
+                    ),
+                    child: _buildOrderPanel(double.infinity, isCompact: true),
                   ),
-                  child: _buildOrderPanel(double.infinity, isCompact: true),
-                ),
               ],
             );
           } else {
+            // 데스크톱 / 태블릿 레이아웃 유지
             return Row(
               children: [
                 Expanded(
-                    child: _buildProductList(sortedKeys, groupedProducts, 5)),
+                    child: _buildProductList(
+                        sortedKeys, groupedProducts, itemExtent)),
                 _buildOrderPanel(320),
               ],
             );
@@ -162,7 +243,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
   // 상품 리스트 빌더 (여백 축소)
   Widget _buildProductList(List<String> sortedKeys,
-      Map<String, List<ProductModel>> groupedProducts, int crossAxisCount) {
+      Map<String, List<ProductModel>> groupedProducts, double maxExtent) {
     return ListView.builder(
       padding: const EdgeInsets.all(8),
       itemCount: sortedKeys.length,
@@ -176,8 +257,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: maxExtent, // 고정 개수 대신 최대 너비 적용
                 childAspectRatio: 0.8,
                 crossAxisSpacing: 6,
                 mainAxisSpacing: 6,
@@ -211,15 +292,15 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(6)),
-                      image: DecorationImage(
-                        image: KioskHelper.getImageProvider(p.thumbnail),
-                        fit: BoxFit.cover,
-                      ),
+                  child: ClipRRect(
+                    // 1. 이미지의 둥근 모서리를 위해 사용
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(6)),
+                    child: SizedBox(
+                      width: double.infinity,
+                      // 2. KioskHelper의 최적화된 이미지 빌더 호출 (내부에 cacheWidth: 300 포함됨)
+                      child: KioskHelper.imageTypeBuilder(
+                          p.thumbnail, BoxFit.cover),
                     ),
                   ),
                 ),
@@ -239,7 +320,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                           Text('${TextUtil.money(p.basePrice)}원',
                               style: const TextStyle(
                                   color: PageColors.price,
-                                  fontSize: 10,
+                                  fontSize: 9,
                                   fontWeight: FontWeight.w900)),
                           Container(
                             padding: const EdgeInsets.symmetric(

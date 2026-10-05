@@ -17,4 +17,5 @@ class OrderItems extends Table {
   IntColumn get basePrice => integer()();
 
   IntColumn get quantity => integer()();
+  IntColumn get discount => integer().withDefault(const Constant(0))();
 }

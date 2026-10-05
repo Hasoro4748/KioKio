@@ -6,7 +6,7 @@ class RelationDao {
 
   RelationDao(this.db);
 
-  /// 테마 조회
+  /// 테마 조회 (displayOrder 오름차순 정렬 추가)
   Future<List<String>> getThemes(int productId) async {
     final query = db.select(db.productThemes).join([
       innerJoin(
@@ -14,7 +14,10 @@ class RelationDao {
         db.themes.id.equalsExp(db.productThemes.themeId),
       ),
     ])
-      ..where(db.productThemes.productId.equals(productId));
+      ..where(db.productThemes.productId.equals(productId))
+      ..orderBy([
+        OrderingTerm(expression: db.themes.displayOrder, mode: OrderingMode.asc)
+      ]); // ★ 추가
 
     final rows = await query.get();
     return rows.map((e) => e.readTable(db.themes).name).toList();
@@ -28,10 +31,13 @@ class RelationDao {
         db.sellers.id.equalsExp(db.productSellers.sellerId),
       ),
     ])
-      ..where(db.productSellers.productId.equals(productId));
+      ..where(db.productSellers.productId.equals(productId))
+      ..orderBy([
+        OrderingTerm(
+            expression: db.sellers.displayOrder, mode: OrderingMode.asc)
+      ]); // ★ 추가
 
     final rows = await query.get();
-
     return rows.map((e) => e.readTable(db.sellers).name).toList();
   }
 
@@ -43,10 +49,13 @@ class RelationDao {
         db.categories.id.equalsExp(db.productCategories.categoryId),
       ),
     ])
-      ..where(db.productCategories.productId.equals(productId));
+      ..where(db.productCategories.productId.equals(productId))
+      ..orderBy([
+        OrderingTerm(
+            expression: db.categories.displayOrder, mode: OrderingMode.asc)
+      ]); // ★ 추가
 
     final rows = await query.get();
-
     return rows.map((e) => e.readTable(db.categories).name).toList();
   }
 

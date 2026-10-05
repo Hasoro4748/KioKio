@@ -44,7 +44,7 @@ class _OrderTotalScreenState extends ConsumerState<OrderTotalScreen> {
         data: ThemeData.light().copyWith(
             colorScheme:
                 const ColorScheme.light(primary: PageColors.cateSelect)),
-        child: child!,
+        child: child ?? const SizedBox(),
       ),
     );
 

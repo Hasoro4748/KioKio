@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:kiosk/db/app_database.dart';
 import 'package:kiosk/db/dao/filter_dao.dart';
@@ -6,6 +8,7 @@ import 'package:kiosk/db/dao/product_dao.dart';
 import 'package:kiosk/db/dao/relation_dao.dart';
 import 'package:kiosk/db/mapper/product_image_mapper.dart';
 import 'package:kiosk/db/mapper/product_mapper.dart';
+import 'package:kiosk/models/product_image_model.dart';
 import 'package:kiosk/models/product_model.dart';
 
 class ProductRepository {
@@ -23,18 +26,39 @@ class ProductRepository {
 
   /// 전체 상품 조회
   Future<List<ProductModel>> getProducts() async {
+    // 1. 상품 전체 목록 1회 조회
     final products = await productDao.getAll();
+    if (products.isEmpty) return [];
+
+    // 2. 전체 이미지 데이터 1회 조회 (N번 쿼리 ➔ 1번 쿼리로 단축)
+    final allImages = await imageDao.getAllImages(); // 전체 이미지 읽기
+    final imageMap = <int, List<ProductImageModel>>{};
+    for (var img in allImages) {
+      imageMap
+          .putIfAbsent(img.productId, () => [])
+          .add(ProductImageMapper.fromData(img));
+    }
 
     final result = <ProductModel>[];
 
     for (final p in products) {
-      final images = await imageDao.getByProductId(p.id);
-
+      final images = imageMap[p.id] ?? [];
       final themes = await relationDao.getThemes(p.id);
-
       final sellers = await relationDao.getSellers(p.id);
-
       final categories = await relationDao.getCategories(p.id);
+
+      int currentStock = p.stock;
+      if (p.isSet && p.componentIds != null) {
+        final List<int> ids = List<int>.from(jsonDecode(p.componentIds!));
+        int minStock = 999999;
+        for (var id in ids) {
+          final comp = await productDao.getById(id);
+          if (comp != null && comp.stock < minStock) {
+            minStock = comp.stock;
+          }
+        }
+        currentStock = minStock == 999999 ? 0 : minStock;
+      }
 
       result.add(
         ProductModel(
@@ -44,10 +68,15 @@ class ProductRepository {
           sellers: sellers,
           categories: categories,
           basePrice: p.basePrice,
-          images: images.map((e) => ProductImageMapper.fromData(e)).toList(),
+          images: images,
           description: p.description,
-          stock: p.stock,
+          stock: currentStock,
+          isSet: p.isSet,
+          componentIds: p.componentIds != null
+              ? List<int>.from(jsonDecode(p.componentIds!))
+              : [],
           isAvailable: p.isAvailable,
+          displayOrder: p.displayOrder,
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,
         ),
@@ -78,8 +107,13 @@ class ProductRepository {
       description: product.description,
       stock: product.stock,
       isAvailable: product.isAvailable,
+      displayOrder: product.displayOrder, // ★ 추가
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
+      isSet: product.isSet,
+      componentIds: product.componentIds != null
+          ? List<int>.from(jsonDecode(product.componentIds!))
+          : [],
     );
   }
 
@@ -97,6 +131,7 @@ class ProductRepository {
       description: product.description,
       stock: product.stock,
       isAvailable: product.isAvailable,
+      displayOrder: product.displayOrder, // ★ 추가
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
     );
@@ -117,12 +152,31 @@ class ProductRepository {
     });
   }
 
+  /// 여러 상품 재고 일괄 차감 (결제 시 속도 최적화)
+  Future<void> updateStocksBatch(Map<int, int> stockUpdates) async {
+    await db.transaction(() async {
+      for (var entry in stockUpdates.entries) {
+        await productDao.updateProductStock(entry.key, entry.value);
+      }
+    });
+  }
+
   Future<void> addProduct(ProductModel model) async {
     await db.transaction(() async {
+      final allProducts = await productDao.getAll();
+      final maxOrder = allProducts.isEmpty
+          ? 0
+          : allProducts
+              .map((p) => p.displayOrder)
+              .reduce((a, b) => a > b ? a : b);
+
+      // 신규 상품은 맨 마지막(maxOrder + 1) 순서 부여
+      final productWithOrder = model.copyWith(displayOrder: maxOrder + 1);
+
       // insert 대신 insert(..., mode: InsertMode.replace) 사용
       final productId = await db.into(db.products).insert(
-            ProductMapper.toCompanion(model),
-            mode: InsertMode.replace, // 중복 시 덮어쓰기
+            ProductMapper.toCompanion(productWithOrder),
+            mode: InsertMode.replace,
           );
 
       // 기존 이미지 삭제 후 다시 추가 (중복 방지)
@@ -152,6 +206,18 @@ class ProductRepository {
       // 관계 초기화 후 재생성
       await relationDao.clearRelations(model.id);
       await _updateRelations(productId, model);
+    });
+  }
+
+  /// 상품 표시 순서 일괄 업데이트
+  Future<void> updateProductOrders(List<ProductModel> reorderedProducts) async {
+    await db.transaction(() async {
+      for (int i = 0; i < reorderedProducts.length; i++) {
+        final product = reorderedProducts[i];
+        // 순서 번호(0, 1, 2, ...)로 일괄 업데이트
+        await (db.update(db.products)..where((p) => p.id.equals(product.id)))
+            .write(ProductsCompanion(displayOrder: Value(i)));
+      }
     });
   }
 

@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   bonsoir_windows
   file_selector_windows
   flutter_nsd
+  permission_handler_windows
   sqlite3_flutter_libs
 )
 

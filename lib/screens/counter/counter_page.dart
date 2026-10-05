@@ -288,153 +288,216 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
     );
   }
 
-  void _showPendingOrders(
-    List<OrderModel> pendingOrders,
-    Responsive rs,
-  ) {
+  void _showPendingOrders(List<OrderModel> pendingOrders, Responsive rs) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
-      ),
+      backgroundColor: Colors.transparent, // 투명하게 설정하여 커스텀 컨테이너 사용
       builder: (_) {
-        return SafeArea(
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.7,
-            child: Column(
-              children: [
-                const SizedBox(height: 16),
-
-                /// 핸들바
-                Container(
-                  width: 60,
-                  height: 6,
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              // 상단 핸들바
+              Container(
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 20),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('결제 대기 주문',
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: PageColors.textBlue)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20)),
+                      child: Text('총 ${pendingOrders.length}건',
+                          style: const TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13)),
+                    ),
+                  ],
                 ),
+              ),
+              const SizedBox(height: 16),
 
-                const SizedBox(height: 16),
+              Expanded(
+                child: pendingOrders.isEmpty
+                    ? _buildEmptyPendingState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        itemCount: pendingOrders.length,
+                        itemBuilder: (context, index) {
+                          final order = pendingOrders[index];
+                          final timeDiff = DateTime.now()
+                              .difference(order.createdAt)
+                              .inMinutes;
 
-                const Text(
-                  '결제 대기 주문',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                Expanded(
-                  child: pendingOrders.isEmpty
-                      ? const Center(
-                          child: Text(
-                            '대기 중인 주문이 없습니다.',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: pendingOrders.length,
-                          itemBuilder: (context, index) {
-                            final order = pendingOrders[index];
-
-                            return Card(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              elevation: 2,
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 12,
-                                ),
-
-                                /// 주문번호
-                                title: Text(
-                                  '주문번호 : ${DateFormat('MMdd -').format(order.createdAt)} ${order.id.toString()}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-
-                                /// 상품 정보
-                                subtitle: Padding(
-                                  padding: const EdgeInsets.only(top: 6),
-                                  child: Text(
-                                    '${order.items.length}개 상품',
-                                  ),
-                                ),
-
-                                /// 금액
-                                trailing: Text(
-                                  '${TextUtil.money(order.totalPrice)}원',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-
-                                /// 주문 상세 열기
-                                onTap: () {
-                                  Navigator.pop(context);
-
-                                  showDialog(
-                                    context: context,
-                                    builder: (dialogContext) {
-                                      return OrderDetailDialog(
-                                        order: order,
-                                        rs: rs,
-                                        onDelete: () async {
-                                          await ref
-                                              .read(orderProvider.notifier)
-                                              .deleteOrder(order);
-
-                                          if (mounted) {
-                                            Navigator.of(dialogContext).pop();
-                                          }
-                                        },
-                                        onCancel: () async {
-                                          await ref
-                                              .read(orderProvider.notifier)
-                                              .cancelOrder(order);
-
-                                          if (mounted) {
-                                            Navigator.of(dialogContext).pop();
-                                          }
-                                        },
-                                        onApprove: () async {
-                                          await ref
-                                              .read(orderProvider.notifier)
-                                              .approveOrder(order);
-
-                                          if (mounted) {
-                                            Navigator.of(dialogContext).pop();
-                                          }
-                                        },
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
+                          return _buildPendingOrderCard(order, timeDiff, rs);
+                        },
+                      ),
+              ),
+            ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildEmptyPendingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.check_circle_outline_rounded,
+              size: 64, color: Colors.grey[300]),
+          const SizedBox(height: 16),
+          const Text('현재 대기 중인 주문이 없습니다.',
+              style: TextStyle(color: Colors.grey, fontSize: 16)),
+        ],
+      ),
+    );
+  }
+
+  // 개별 주문 카드 UI
+  Widget _buildPendingOrderCard(
+      OrderModel order, int minutesAgo, Responsive rs) {
+    String firstItemName =
+        order.items.isNotEmpty ? order.items.first.name : "상품 없음";
+    int otherItemsCount = order.items.length - 1;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
+      ),
+      child: InkWell(
+        onTap: () => _openOrderDetail(order, rs), // 상세 다이얼로그 호출 헬퍼
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              // 왼쪽: 시간 표시 배지
+              Container(
+                width: 60,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: minutesAgo > 10 ? Colors.red[50] : Colors.blue[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Text(minutesAgo.toString(),
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: minutesAgo > 10 ? Colors.red : Colors.blue)),
+                    Text('분 전',
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: minutesAgo > 10 ? Colors.red : Colors.blue)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+
+              // 중간: 주문 정보
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('주문번호 #${order.id}',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 4),
+                    Text(
+                      otherItemsCount > 0
+                          ? '$firstItemName 외 $otherItemsCount건'
+                          : firstItemName,
+                      style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(DateFormat('HH:mm:ss').format(order.createdAt),
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[400])),
+                  ],
+                ),
+              ),
+
+              // 오른쪽: 금액 및 화살표
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('${TextUtil.money(order.totalPrice)}원',
+                      style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: PageColors.price)),
+                  const SizedBox(height: 4),
+                  const Icon(Icons.arrow_forward_ios_rounded,
+                      size: 14, color: Colors.grey),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openOrderDetail(OrderModel order, Responsive rs) {
+    Navigator.pop(context); // 바텀시트 닫기
+    showDialog(
+      context: context,
+      builder: (ctx) => OrderDetailDialog(
+        order: order,
+        rs: rs,
+        onDelete: () async {
+          await ref.read(orderProvider.notifier).deleteOrder(order);
+          if (ctx.mounted) Navigator.pop(ctx); // ★ 다이얼로그 닫기
+        },
+        onCancel: () async {
+          await ref.read(orderProvider.notifier).cancelOrder(order);
+          if (ctx.mounted) Navigator.pop(ctx); // ★ 다이얼로그 닫기
+        },
+        onApprove: () async {
+          await ref.read(orderProvider.notifier).approveOrder(order);
+          if (ctx.mounted) Navigator.pop(ctx); // ★ 다이얼로그 닫기
+        },
+      ),
     );
   }
 

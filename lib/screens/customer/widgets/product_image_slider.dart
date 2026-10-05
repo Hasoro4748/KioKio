@@ -29,14 +29,17 @@ class _ProductImagesSliderState extends State<ProductImagesSlider> {
   @override
   Widget build(BuildContext context) {
     final rs = Responsive(context);
+    final detailImages =
+        widget.images.where((img) => !img.isThumbnail).isNotEmpty
+            ? widget.images.where((img) => !img.isThumbnail).toList()
+            : widget.images;
     return Stack(
       children: [
-        /// 이미지 슬라이드
-        widget.images.length == 0
+        detailImages.isEmpty
             ? KioskHelper.imageTypeBuilder('', BoxFit.cover)
             : PageView.builder(
                 controller: _controller,
-                itemCount: widget.images.length,
+                itemCount: detailImages.length,
                 onPageChanged: (index) {
                   setState(() {
                     currentIndex = index;
@@ -44,15 +47,12 @@ class _ProductImagesSliderState extends State<ProductImagesSlider> {
                 },
                 itemBuilder: (context, index) {
                   return ClipRRect(
-                    borderRadius: BorderRadius.circular(
-                      rs.radius(16),
-                    ),
+                    borderRadius: BorderRadius.circular(rs.radius(16)),
                     child: Padding(
-                      padding: EdgeInsets.all(
-                        rs.padding(12),
-                      ),
-                      child: KioskHelper.imageTypeBuilder(
-                          widget.images[index].imagePath, BoxFit.contain),
+                      padding: EdgeInsets.all(rs.padding(12)),
+                      child: KioskHelper.imageTypeDetailBuilder(
+                          detailImages[index].imagePath,
+                          BoxFit.contain), // 원본 비율 유지
                     ),
                   );
                 },
@@ -83,7 +83,7 @@ class _ProductImagesSliderState extends State<ProductImagesSlider> {
           ),
 
         /// 다음 버튼
-        if (currentIndex < widget.images.length - 1)
+        if (currentIndex < widget.images.length - 2)
           Positioned(
             right: rs.padding(8),
             top: 0,
@@ -114,7 +114,7 @@ class _ProductImagesSliderState extends State<ProductImagesSlider> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
-              widget.images.length,
+              widget.images.length - 1,
               (index) {
                 final bool isSelected = currentIndex == index;
 

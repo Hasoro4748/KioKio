@@ -7,10 +7,12 @@ import 'package:kiosk/db/app_database.dart';
 import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/models/product_model.dart';
 import 'package:kiosk/network/kiosk_network_status.dart';
+import 'package:kiosk/providers/dao_provider.dart';
 import 'package:kiosk/providers/kiosk_network_provider.dart';
 import 'package:kiosk/providers/order_providers.dart';
 import 'package:kiosk/providers/product_providers.dart';
 import 'package:kiosk/providers/settings_provider.dart';
+import 'package:kiosk/providers/sync_progress_provider.dart';
 import 'package:kiosk/screens/customer/widgets/cart_panel.dart';
 import 'package:kiosk/screens/customer/widgets/category_chip.dart';
 import 'package:kiosk/screens/customer/widgets/idle_screen.dart';
@@ -138,39 +140,43 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     selectedSeller = null;
   }
 
-  List<String> getThemes(List<ProductModel> products) {
-    return products
-        .where((p) => p.isAvailable) // 판매 가능 상품만 필터링
-        .expand((e) => e.themes)
-        .toSet()
-        .toList()
-      ..sort();
+  List<String> getThemes(
+      List<ProductModel> products, List<String> masterThemes) {
+    final set = <String>{};
+    for (var p in products) {
+      if (p.isAvailable) set.addAll(p.themes);
+    }
+    return sortTagsByMasterOrder(set.toList(), masterThemes);
   }
 
-  List<String> getCategoryGroups(List<ProductModel> products) {
+  List<String> getCategoryGroups(
+      List<ProductModel> products, List<String> masterCategories) {
     final filtered = products.where((p) {
-      // 판매 가능 여부 필수 조건 추가
       final availableOk = p.isAvailable;
       final themeOk = selectedTheme == null || p.themes.contains(selectedTheme);
       final sellerOk =
           selectedSeller == null || p.sellers.contains(selectedSeller);
-
       return availableOk && themeOk && sellerOk;
     });
 
-    return filtered.expand((e) => e.categories).toSet().toList()..sort();
+    final set = <String>{};
+    for (var p in filtered) {
+      set.addAll(p.categories);
+    }
+    return sortTagsByMasterOrder(set.toList(), masterCategories);
   }
 
-  List<String> getSellers(List<ProductModel> products) {
-    return products
-        .where((p) => p.isAvailable) // 판매 가능 상품만 필터링
-        .expand((e) => e.sellers)
-        .toSet()
-        .toList();
+  List<String> getSellers(
+      List<ProductModel> products, List<String> masterSellers) {
+    final set = <String>{};
+    for (var p in products) {
+      if (p.isAvailable) set.addAll(p.sellers);
+    }
+    return sortTagsByMasterOrder(set.toList(), masterSellers);
   }
 
   List<ProductModel> getFilteredProducts(List<ProductModel> products) {
-    return products.where((p) {
+    final list = products.where((p) {
       final availableOk = p.isAvailable;
       final themeOk = selectedTheme == null || p.themes.contains(selectedTheme);
 
@@ -182,6 +188,15 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
       return availableOk && themeOk && cateOk && sellerOk;
     }).toList();
+
+    // ★ displayOrder 오름차순 정렬 추가 (동일한 순서 번호일 경우 생성일순)
+    list.sort((a, b) {
+      final cmp = a.displayOrder.compareTo(b.displayOrder);
+      if (cmp != 0) return cmp;
+      return a.createdAt.compareTo(b.createdAt);
+    });
+
+    return list;
   }
 
   bool isSellerEnabled(List<ProductModel> products, String sellerName) {
@@ -240,23 +255,29 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('주문 확인'),
-        content: Text(
-          '총 ${_totalValue()}개 / ${TextUtil.money(_totalPrice())}원\n주문하시겠습니까?',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('총 ${_totalValue()}개 품목'),
+            const SizedBox(height: 8),
+            Text('최종 결제금액: ${TextUtil.money(_totalPrice())}원',
+                style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: PageColors.price)),
+            const SizedBox(height: 12),
+            const Text('주문하시겠습니까?'),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
-          ),
+              onPressed: () => Navigator.pop(context), child: const Text('취소')),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-
-              checkout();
-
-              setState(() {
-                initTag();
-              });
+              checkout(); // 수정된 checkout 호출
+              setState(() => initTag());
             },
             child: const Text('주문하기'),
           ),
@@ -302,27 +323,41 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
       items: List.from(cart),
       createdAt: DateTime.now(),
     );
-    // DB에는 주문 저장 하지 않음
-    // await ref.read(orderProvider.notifier).addOrder(order);
     final bool isSent =
         ref.read(kioskNetworkProvider.notifier).sendOrder(order);
     ScaffoldMessenger.of(context).removeCurrentSnackBar();
     if (isSent) {
       final productNotifier = ref.read(productProvider.notifier);
       final products = ref.read(productProvider).value ?? [];
+      final Map<int, int> stockUpdates = {}; // 차감할 [상품ID : 변경후재고] 맵
 
       for (var item in cart) {
         final product =
             products.firstWhereOrNull((p) => p.id == item.productId);
         if (product != null) {
-          // 기존 재고에서 주문 수량만큼 뺀 새로운 모델 생성
-          final updatedProduct = product.copyWith(
-              stock: (product.stock - item.quantity)
-                  .clamp(0, double.infinity)
-                  .toInt());
-          // DB 업데이트 호출 (Repository 연동)
-          await productNotifier.updateProduct(updatedProduct);
+          if (product.isSet && product.componentIds.isNotEmpty) {
+            // 세트 상품: 모든 구성품 재고 차감 계산
+            for (var subId in product.componentIds) {
+              final subProduct =
+                  products.firstWhereOrNull((p) => p.id == subId);
+              if (subProduct != null) {
+                final currentStock = stockUpdates[subId] ?? subProduct.stock;
+                stockUpdates[subId] =
+                    (currentStock - item.quantity).clamp(0, 99999).toInt();
+              }
+            }
+          } else {
+            // 일반 상품: 본인 재고 차감 계산
+            final currentStock = stockUpdates[product.id] ?? product.stock;
+            stockUpdates[product.id] =
+                (currentStock - item.quantity).clamp(0, 99999).toInt();
+          }
         }
+      }
+      if (stockUpdates.isNotEmpty) {
+        await ref
+            .read(productProvider.notifier)
+            .updateProductsStockBatch(stockUpdates);
       }
       _showOrderCompleteOverlay(context);
     } else {
@@ -333,9 +368,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
         ),
       );
     }
-    setState(() {
-      cart.clear();
-    });
+    setState(() => cart.clear());
   }
 
   String generateOrderNumber() {
@@ -343,6 +376,19 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}/'
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+  }
+
+  List<String> sortTagsByMasterOrder(
+      List<String> tags, List<String> masterOrder) {
+    final list = List<String>.from(tags);
+    list.sort((a, b) {
+      int indexA = masterOrder.indexOf(a);
+      int indexB = masterOrder.indexOf(b);
+      if (indexA == -1) indexA = 999;
+      if (indexB == -1) indexB = 999;
+      return indexA.compareTo(indexB);
+    });
+    return list;
   }
 
   void _showOrderCompleteOverlay(BuildContext context) {
@@ -519,8 +565,11 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(settingsProvider);
-
+    final useIdleScreen =
+        ref.watch(settingsProvider.select((s) => s.useKioskIdleScreen));
+    final logoPath = ref.watch(settingsProvider.select((s) => s.kioskLogoPath));
+    final WelcomeMessage =
+        ref.watch(settingsProvider.select((s) => s.kioskWelcomeMessage));
     ref.listen<AppSettings>(settingsProvider, (previous, next) {
       if (!next.useKioskIdleScreen) {
         _countdownTimer?.cancel();
@@ -532,10 +581,10 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
       }
     });
 
-    if (_isIdle && settings.useKioskIdleScreen) {
+    if (_isIdle && useIdleScreen) {
       return IdleScreen(
-          welcomeMessage: settings.kioskWelcomeMessage,
-          logoPath: settings.kioskLogoPath, // 로고 경로 전달
+          welcomeMessage: WelcomeMessage,
+          logoPath: logoPath, // 로고 경로 전달
           onStart: () {
             setState(() => _isIdle = false);
             _startTimer();
@@ -547,59 +596,10 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
       onPointerDown: _handleUserInteraction,
       behavior: HitTestBehavior.translucent,
       child: Stack(
-        // 카운트다운 문구를 겹쳐서 띄우기 위해 Stack 사용
         children: [
           _buildMainContent(context),
-
-          // --- 카운트다운 경고 문구 추가 (10초 이하일 때만 노출) ---
-          if (_remainingSeconds <= 10)
-            Positioned(
-              top: 100,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Material(
-                  // 1. Material 위젯으로 감싸줍니다.
-                  color: Colors.transparent, // 배경은 투명하게
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 40, vertical: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(50),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black26, blurRadius: 10)
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '조작이 없을 시 $_remainingSeconds초 후 화면이 초기화됩니다.',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            decoration:
-                                TextDecoration.none, // 2. (선택사항) 밑줄 강제 제거
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          '화면을 터치하면 계속 주문할 수 있습니다.',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                            decoration:
-                                TextDecoration.none, // 2. (선택사항) 밑줄 강제 제거
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          CountdownWarningBanner(remainingSeconds: _remainingSeconds),
+          const SyncProgressOverlay(),
         ],
       ),
     );
@@ -610,6 +610,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     final productsAsync = ref.watch(productProvider);
     final networkStatus = ref.watch(kioskNetworkProvider);
     final settings = ref.watch(settingsProvider);
+
     return productsAsync.when(
         loading: () =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -627,12 +628,28 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
           if (products.isEmpty) {
             return _buildEmptyState(rs, networkStatus);
           }
+          final masterThemes = ref.watch(orderedThemesProvider).value ?? [];
+          final masterCategories =
+              ref.watch(orderedCategoriesProvider).value ?? [];
+          final masterSellers = ref.watch(orderedSellersProvider).value ?? [];
 
           // 3. 연결 성공 + 상품 존재 시에만 본래의 상품 목록 표시
-          final themes = getThemes(products);
-          final sellers = getSellers(products);
-          final categoryGroups = getCategoryGroups(products);
+          final themes = getThemes(products, masterThemes);
+          final sellers = getSellers(products, masterSellers);
+          final categoryGroups = getCategoryGroups(products, masterCategories);
+
           final filteredProducts = getFilteredProducts(products);
+          final Map<String, List<ProductModel>> groupedProducts = {};
+          for (var p in filteredProducts) {
+            final themes = p.themes.isEmpty ? ['기타'] : p.themes;
+            for (var t in themes) {
+              if (selectedTheme == null || selectedTheme == t) {
+                groupedProducts.putIfAbsent(t, () => []).add(p);
+              }
+            }
+          }
+          final sortedKeys = sortTagsByMasterOrder(
+              groupedProducts.keys.toList(), masterThemes);
 
           return Scaffold(
             body: Row(
@@ -1014,129 +1031,103 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
                             : Row(
                                 children: [
+                                  /// 왼쪽: 테마별 상품 목록 섹션
                                   Expanded(
                                     child: Container(
                                       color: baseBackgroundColor,
-                                      child: GridView.builder(
-                                        padding: EdgeInsets.all(
-                                          rs.padding(16),
-                                        ),
-                                        gridDelegate:
-                                            SliverGridDelegateWithMaxCrossAxisExtent(
-                                          maxCrossAxisExtent: cart.isNotEmpty
-                                              ? 280
-                                              : KioskHelper.calculateMaxExtent(
-                                                  context,
-                                                  settings.kioskGridCount,
-                                                  cart.isNotEmpty,
-                                                  rs),
-                                          childAspectRatio: 0.8,
-                                          crossAxisSpacing: rs.padding(16),
-                                          mainAxisSpacing: rs.padding(16),
-                                        ),
-                                        itemCount: filteredProducts.length,
+                                      child: ListView.builder(
+                                        padding: EdgeInsets.all(rs.padding(8)),
+                                        itemCount: sortedKeys.length,
                                         itemBuilder: (context, index) {
-                                          final product =
-                                              filteredProducts[index];
+                                          final themeName = sortedKeys[index];
+                                          final themeProducts =
+                                              groupedProducts[themeName]!;
 
-                                          return ProductCard(
-                                            product: product,
-                                            onTap: !product.isSoldOut
-                                                ? () {
-                                                    final int currentInCart =
-                                                        _getCartQuantity(
-                                                            product.id);
-                                                    final int availableToOrder =
-                                                        product.stock -
-                                                            currentInCart;
-                                                    if (availableToOrder <= 0) {
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text(
-                                                              '이미 장바구니에 해당 상품의 모든 재고가 담겨 있습니다.'),
-                                                          backgroundColor:
-                                                              Colors.redAccent,
-                                                        ),
-                                                      );
-                                                      return;
-                                                    }
-                                                    showDialog(
-                                                      context: context,
-                                                      builder: (_) =>
-                                                          ProductDetailDialog(
-                                                        product: product.copyWith(
-                                                            stock:
-                                                                availableToOrder),
-                                                        onAddCart: (quantity) {
-                                                          final existing = cart
-                                                              .firstWhereOrNull(
-                                                            (e) =>
-                                                                e.productId ==
-                                                                product.id,
-                                                          );
+                                          return Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              // 테마 섹션 헤더
+                                              _buildThemeSectionHeader(
+                                                  themeName,
+                                                  themeProducts.length,
+                                                  rs),
 
-                                                          setState(() {
-                                                            if (existing !=
-                                                                null) {
-                                                              existing.quantity +=
-                                                                  quantity;
-                                                            } else {
-                                                              cart.add(
-                                                                OrderItemModel(
-                                                                  productId:
-                                                                      product
-                                                                          .id,
-                                                                  name: product
-                                                                      .name,
-                                                                  basePrice: product
-                                                                      .basePrice,
-                                                                  quantity:
-                                                                      quantity,
-                                                                ),
-                                                              );
-                                                            }
-                                                          });
-                                                        },
-                                                      ),
-                                                    );
-                                                  }
-                                                : null,
+                                              // 테마 내 상품 그리드
+                                              GridView.builder(
+                                                shrinkWrap: true,
+                                                physics:
+                                                    const NeverScrollableScrollPhysics(),
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: rs.padding(16)),
+                                                gridDelegate:
+                                                    SliverGridDelegateWithMaxCrossAxisExtent(
+                                                  maxCrossAxisExtent: cart
+                                                          .isNotEmpty
+                                                      ? 280
+                                                      : KioskHelper
+                                                          .calculateMaxExtent(
+                                                              context,
+                                                              settings
+                                                                  .kioskGridCount,
+                                                              cart.isNotEmpty,
+                                                              rs),
+                                                  childAspectRatio: 0.8,
+                                                  crossAxisSpacing:
+                                                      rs.padding(16),
+                                                  mainAxisSpacing:
+                                                      rs.padding(16),
+                                                ),
+                                                itemCount: themeProducts.length,
+                                                itemBuilder: (context, pIndex) {
+                                                  final product =
+                                                      themeProducts[pIndex];
+                                                  return ProductCard(
+                                                    product: product,
+                                                    onTap: !product.isSoldOut
+                                                        ? () =>
+                                                            _handleProductTap(
+                                                                product)
+                                                        : null,
+                                                  );
+                                                },
+                                              ),
+                                              const SizedBox(
+                                                  height: 12), // 섹션 간 여유 공간
+                                            ],
                                           );
                                         },
                                       ),
                                     ),
                                   ),
+
+                                  /// 오른쪽: 고정 장바구니 패널
                                   if (cart.isNotEmpty)
                                     Container(
                                       width: rs.screenWidth * 0.3,
-                                      color: baseBackgroundColor,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        border: Border(
+                                            left: BorderSide(
+                                                color: Colors.grey.shade200)),
+                                      ),
                                       child: CartPanel(
                                         cart: cart,
                                         totalValue: _totalValue(),
                                         totalPrice: _totalPrice(),
                                         getStock: (productId) =>
                                             _getStock(products, productId),
-                                        onClear: () {
-                                          setState(() {
-                                            cart.clear();
-                                          });
-                                        },
-                                        onIncrease: (item) {
-                                          setState(() {
-                                            item.quantity++;
-                                          });
-                                        },
-                                        onDecrease: (item) {
-                                          setState(() {
-                                            if (item.quantity > 1) {
-                                              item.quantity--;
-                                            } else {
-                                              cart.remove(item);
-                                            }
-                                          });
-                                        },
+                                        onClear: () =>
+                                            setState(() => cart.clear()),
+                                        onIncrease: (item) =>
+                                            setState(() => item.quantity++),
+                                        onDecrease: (item) => setState(() {
+                                          if (item.quantity > 1) {
+                                            item.quantity--;
+                                          } else {
+                                            cart.remove(item);
+                                          }
+                                        }),
                                         onCheckout: _confirmCheckout,
                                       ),
                                     ),
@@ -1150,5 +1141,202 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
             ),
           );
         });
+  }
+
+  Widget _buildThemeSectionHeader(String title, int count, Responsive rs) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 5,
+            height: 22,
+            decoration: BoxDecoration(
+                color: PageColors.cateSelect,
+                borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: TextStyle(
+                fontSize: rs.font(20),
+                fontWeight: FontWeight.w900,
+                color: PageColors.textBlue,
+                fontFamily: 'GmarketSans'),
+          ),
+          const SizedBox(width: 8),
+          Text('($count)',
+              style: TextStyle(
+                  fontSize: rs.font(14),
+                  color: Colors.grey[500],
+                  fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  void _handleProductTap(ProductModel product) {
+    final int currentInCart = _getCartQuantity(product.id);
+    final int availableToOrder = product.stock - currentInCart;
+
+    if (availableToOrder <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('이미 모든 재고가 장바구니에 담겨 있습니다.'),
+            backgroundColor: Colors.redAccent),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (_) => ProductDetailDialog(
+        product: product.copyWith(stock: availableToOrder),
+        onAddCart: (quantity) {
+          final existing =
+              cart.firstWhereOrNull((e) => e.productId == product.id);
+          setState(() {
+            if (existing != null) {
+              existing.quantity += quantity;
+            } else {
+              cart.add(OrderItemModel(
+                productId: product.id,
+                name: product.name,
+                basePrice: product.basePrice,
+                quantity: quantity,
+              ));
+            }
+          });
+        },
+      ),
+    );
+  }
+}
+
+class SyncProgressOverlay extends ConsumerWidget {
+  const SyncProgressOverlay({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final syncState = ref.watch(syncProgressProvider);
+
+    if (!syncState.isSyncing) return const SizedBox.shrink();
+
+    return Material(
+      color: Colors.black.withOpacity(0.55),
+      child: Center(
+        child: Container(
+          width: 340,
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 20)],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: PageColors.cateSelect.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.cloud_download_rounded,
+                    color: PageColors.cateSelect, size: 40),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'POS 데이터 동기화 중',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: 'GmarketSans'),
+              ),
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: syncState.progress,
+                  backgroundColor: Colors.grey[200],
+                  color: PageColors.cateSelect,
+                  minHeight: 10,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      syncState.message,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    '${syncState.percentage}%',
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: PageColors.cateSelect),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class CountdownWarningBanner extends StatelessWidget {
+  final int remainingSeconds;
+
+  const CountdownWarningBanner({super.key, required this.remainingSeconds});
+
+  @override
+  Widget build(BuildContext context) {
+    if (remainingSeconds > 10) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 100,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.85),
+              borderRadius: BorderRadius.circular(50),
+              boxShadow: const [
+                BoxShadow(color: Colors.black26, blurRadius: 10)
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '조작이 없을 시 $remainingSeconds초 후 화면이 초기화됩니다.',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '화면을 터치하면 계속 주문할 수 있습니다.',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

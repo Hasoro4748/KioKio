@@ -1,5 +1,7 @@
+import 'dart:collection';
 import 'dart:io';
 
+import 'package:external_path/external_path.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -11,6 +13,7 @@ import 'package:kiosk/theme/common_theme.dart';
 import 'package:kiosk/utils/responsive.dart';
 import 'package:kiosk/utils/text_util.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 enum SettlementGrouping { product, theme, seller }
 
@@ -34,15 +37,13 @@ class _ProductSettlementScreenState
       firstDate: DateTime(2023), // 시스템 시작 시점
       lastDate: DateTime.now().add(const Duration(days: 1)),
       locale: const Locale('ko', 'KR'), // 한국어 설정
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
+      builder: (context, child) => Theme(
+        data: ThemeData.light().copyWith(
             colorScheme:
-                const ColorScheme.light(primary: PageColors.cateSelect),
-          ),
-          child: child!,
-        );
-      },
+                const ColorScheme.light(primary: PageColors.cateSelect)),
+        child: child ??
+            const SizedBox(), // ★ child! -> child ?? const SizedBox() 변경
+      ),
     );
 
     if (picked != null) {
@@ -144,50 +145,9 @@ class _ProductSettlementScreenState
     );
   }
 
-  List<_SettlementRow> _calculateStats(
-      List<OrderModel> orders, List<ProductModel> products) {
-    final Map<int, List<String>> themeMap = {
-      for (var p in products) p.id: p.themes
-    };
-    final Map<int, List<String>> sellerMap = {
-      for (var p in products) p.id: p.sellers
-    };
-
-    final Map<String, _SettlementRow> map = {};
-
-    for (var o in orders) {
-      for (var item in o.items) {
-        // 현재 그룹화 기준에 따른 키(Key) 결정
-        List<String> keys = [];
-        if (_currentGrouping == SettlementGrouping.product) {
-          keys = [item.name];
-        } else if (_currentGrouping == SettlementGrouping.theme) {
-          keys = themeMap[item.productId] ?? ['미지정'];
-        } else if (_currentGrouping == SettlementGrouping.seller) {
-          keys = sellerMap[item.productId] ?? ['미지정'];
-        }
-
-        for (var key in keys) {
-          if (map.containsKey(key)) {
-            map[key]!.quantity += item.quantity;
-            map[key]!.totalRevenue += item.totalPrice;
-          } else {
-            map[key] = _SettlementRow(
-              name: key,
-              quantity: item.quantity,
-              unitPrice: item.basePrice,
-              totalRevenue: item.totalPrice,
-            );
-          }
-        }
-      }
-    }
-    return map.values.toList()
-      ..sort((a, b) => b.totalRevenue.compareTo(a.totalRevenue));
-  }
-
   Map<String, List<_SettlementRow>> _calculateGroupedStats(
       List<OrderModel> orders, List<ProductModel> products) {
+    // 상품 ID별 태그 맵 생성
     final Map<int, List<String>> themeMap = {
       for (var p in products) p.id: p.themes
     };
@@ -195,42 +155,65 @@ class _ProductSettlementScreenState
       for (var p in products) p.id: p.sellers
     };
 
-    // 기준(Key)별 상품 집계
-    // Map<그룹명, Map<상품명, 데이터>> 구조로 먼저 중복 제거 합산
     final Map<String, Map<String, _SettlementRow>> groupedMap = {};
 
     for (var o in orders) {
+      int orderItemSum = o.items
+          .fold(0, (sum, item) => sum + (item.basePrice * item.quantity));
+
       for (var item in o.items) {
+        // 할인 배분 로직 유지
+        double ratio = orderItemSum > 0
+            ? (item.basePrice * item.quantity) / orderItemSum
+            : 0;
+        int totalItemDiscount = item.discount + (o.discount * ratio).round();
+        int itemOriginalPrice = item.basePrice * item.quantity;
+
+        // --- 1. 그룹 결정 로직 수정 ---
         List<String> groups = [];
         if (_currentGrouping == SettlementGrouping.product) {
           groups = ['전체 상품'];
         } else if (_currentGrouping == SettlementGrouping.theme) {
-          groups = themeMap[item.productId] ?? ['미지정'];
+          // 테마가 없으면 ['기타'] 로 할당
+          final themes = themeMap[item.productId];
+          groups = (themes == null || themes.isEmpty) ? ['기타'] : themes;
         } else if (_currentGrouping == SettlementGrouping.seller) {
-          groups = sellerMap[item.productId] ?? ['미지정'];
+          // 판매자가 없으면 ['기타'] 로 할당
+          final sellers = sellerMap[item.productId];
+          groups = (sellers == null || sellers.isEmpty) ? ['기타'] : sellers;
         }
 
+        // --- 2. 데이터 누적 루프 ---
         for (var group in groups) {
-          groupedMap.putIfAbsent(group, () => {});
-          final productMap = groupedMap[group]!;
+          final productMap = groupedMap.putIfAbsent(group, () => {});
 
-          if (productMap.containsKey(item.name)) {
-            productMap[item.name]!.quantity += item.quantity;
-            productMap[item.name]!.totalRevenue += item.totalPrice;
+          final existingRow = productMap[item.name];
+          if (existingRow != null) {
+            existingRow.quantity += item.quantity;
+            existingRow.originalRevenue += itemOriginalPrice;
+            existingRow.totalDiscount += totalItemDiscount;
           } else {
             productMap[item.name] = _SettlementRow(
               name: item.name,
               quantity: item.quantity,
-              unitPrice: item.basePrice,
-              totalRevenue: item.totalPrice,
+              originalRevenue: itemOriginalPrice,
+              totalDiscount: totalItemDiscount,
             );
           }
         }
       }
     }
 
-    // 최종 결과 반환 (그룹 이름순 정렬)
-    return groupedMap.map((key, value) => MapEntry(key, value.values.toList()));
+    // 알파벳/가나다 순으로 정렬하되 '기타'는 맨 아래로 보내고 싶다면 추가 정렬 가능
+    final sortedResult = SplayTreeMap<String, List<_SettlementRow>>.from(
+        groupedMap.map((key, value) => MapEntry(key, value.values.toList())),
+        (a, b) {
+      if (a == '기타') return 1; // a가 기타면 뒤로
+      if (b == '기타') return -1; // b가 기타면 앞으로
+      return a.compareTo(b); // 나머지는 일반 정렬
+    });
+
+    return sortedResult;
   }
 
   Widget _buildGroupingChip(SettlementGrouping type, String label) {
@@ -308,10 +291,10 @@ class _ProductSettlementScreenState
       Map<String, List<_SettlementRow>> groupedStats, Responsive rs) {
     List<DataRow> allRows = [];
     int totalGrandQty = 0;
-    int totalGrandRev = 0;
+    int totalGrandOriginal = 0;
+    int totalGrandDiscount = 0;
 
     groupedStats.forEach((groupName, products) {
-      // A. 그룹 헤더 행 (구분선 역할)
       allRows.add(DataRow(
         color: MaterialStateProperty.all(Colors.grey[100]),
         cells: [
@@ -321,26 +304,32 @@ class _ProductSettlementScreenState
           const DataCell(Text('')),
           const DataCell(Text('')),
           const DataCell(Text('')),
+          const DataCell(Text('')),
         ],
       ));
 
       int groupQty = 0;
-      int groupRev = 0;
+      int groupOriginal = 0;
+      int groupDiscount = 0;
 
-      // B. 상품 개별 행
       for (var p in products) {
         groupQty += p.quantity;
-        groupRev += p.totalRevenue;
+        groupOriginal += p.originalRevenue;
+        groupDiscount += p.totalDiscount;
         allRows.add(DataRow(cells: [
           DataCell(Padding(
               padding: const EdgeInsets.only(left: 12), child: Text(p.name))),
           DataCell(Text('${p.quantity}개')),
-          DataCell(Text(TextUtil.money(p.unitPrice))),
-          DataCell(Text(TextUtil.money(p.totalRevenue))),
+          DataCell(Text(TextUtil.money(p.originalRevenue))),
+          DataCell(Text(
+              groupDiscount > 0 ? '-${TextUtil.money(p.totalDiscount)}' : '0',
+              style: const TextStyle(color: Colors.red))),
+          DataCell(Text(TextUtil.money(p.finalRevenue),
+              style: const TextStyle(fontWeight: FontWeight.bold))),
         ]));
       }
 
-      // C. 그룹 소계 행
+      // 그룹 소계
       allRows.add(DataRow(
         cells: [
           const DataCell(Text('└ 소계',
@@ -348,18 +337,20 @@ class _ProductSettlementScreenState
                   TextStyle(fontStyle: FontStyle.italic, color: Colors.grey))),
           DataCell(Text('$groupQty개',
               style: const TextStyle(fontWeight: FontWeight.bold))),
-          const DataCell(Text('')),
-          DataCell(Text(TextUtil.money(groupRev),
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, color: Colors.blueGrey))),
+          DataCell(Text(TextUtil.money(groupOriginal))),
+          DataCell(Text('-${TextUtil.money(groupDiscount)}',
+              style: const TextStyle(color: Colors.red))),
+          DataCell(Text(TextUtil.money(groupOriginal - groupDiscount),
+              style: const TextStyle(fontWeight: FontWeight.bold))),
         ],
       ));
 
       totalGrandQty += groupQty;
-      totalGrandRev += groupRev;
+      totalGrandOriginal += groupOriginal;
+      totalGrandDiscount += groupDiscount;
     });
 
-    // D. 최종 합계 행
+    // 최종 합계
     allRows.add(DataRow(
       color: MaterialStateProperty.all(PageColors.cateSelect.withOpacity(0.1)),
       cells: [
@@ -367,8 +358,12 @@ class _ProductSettlementScreenState
             Text('📊 전체 합계', style: TextStyle(fontWeight: FontWeight.w900))),
         DataCell(Text('$totalGrandQty개',
             style: const TextStyle(fontWeight: FontWeight.w900))),
-        const DataCell(Text('')),
-        DataCell(Text(TextUtil.money(totalGrandRev),
+        DataCell(Text(TextUtil.money(totalGrandOriginal))),
+        DataCell(Text('-${TextUtil.money(totalGrandDiscount)}',
+            style: const TextStyle(
+                color: Colors.red, fontWeight: FontWeight.bold))),
+        DataCell(Text(
+            '${TextUtil.money(totalGrandOriginal - totalGrandDiscount)}원',
             style: const TextStyle(
                 fontWeight: FontWeight.w900,
                 fontSize: 16,
@@ -377,21 +372,13 @@ class _ProductSettlementScreenState
     ));
 
     return DataTable(
-      columnSpacing: rs.isMobile ? 20 : 50,
-      headingRowColor: MaterialStateProperty.all(baseBackgroundColor[100]),
+      columnSpacing: rs.isMobile ? 12 : 30,
       columns: const [
-        DataColumn(
-            label: Text('분류 / 상품명',
-                style: TextStyle(fontWeight: FontWeight.bold))),
-        DataColumn(
-            label: Text('판매량', style: TextStyle(fontWeight: FontWeight.bold)),
-            numeric: true),
-        DataColumn(
-            label: Text('단가', style: TextStyle(fontWeight: FontWeight.bold)),
-            numeric: true),
-        DataColumn(
-            label: Text('총 매출', style: TextStyle(fontWeight: FontWeight.bold)),
-            numeric: true),
+        DataColumn(label: Text('분류 / 상품명')),
+        DataColumn(label: Text('판매량'), numeric: true),
+        DataColumn(label: Text('판매액'), numeric: true),
+        DataColumn(label: Text('할인액'), numeric: true),
+        DataColumn(label: Text('실매출'), numeric: true),
       ],
       rows: allRows,
     );
@@ -451,19 +438,19 @@ class _ProductSettlementScreenState
   }
 
   // 다이얼로그의 '저장하기' 버튼에 연결
-  void _showExportDialog(List<_SettlementRow> stats) {
+  void _showExportDialog(Map<String, List<_SettlementRow>> stats) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('리포트 내보내기'),
-        content: Text('현재 조회된 ${stats.length}개의 항목을 CSV 파일로 저장하시겠습니까?'),
+        title: const Text('상세 리포트 내보내기'),
+        content: const Text('현재 보고 계신 그룹별 상세 내역을 CSV 파일로 저장하시겠습니까?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
           ElevatedButton(
               onPressed: () {
                 Navigator.pop(ctx);
-                _exportToCSV(stats); // 실제 파일 저장 함수 호출
+                _exportToCSV(stats);
               },
               child: const Text('저장하기')),
         ],
@@ -471,41 +458,76 @@ class _ProductSettlementScreenState
     );
   }
 
-  Future<void> _exportToCSV(List<_SettlementRow> stats) async {
+  Future<void> _exportToCSV(
+      Map<String, List<_SettlementRow>> groupedStats) async {
     try {
-      // 1. CSV 데이터 생성 (헤더 포함)
-      String csvData = "상품명,판매량,단가,총 매출합계\n";
-      for (var row in stats) {
-        csvData +=
-            "${row.name},${row.quantity},${row.unitPrice},${row.totalRevenue}\n";
+      // 1. 권한 확인 (Android 전용)
+      if (Platform.isAndroid) {
+        if (!await Permission.manageExternalStorage.request().isGranted) {
+          _showMessage("📁 '모든 파일 관리 권한'이 필요합니다. 설정에서 허용해 주세요.");
+          await openAppSettings();
+          return;
+        }
       }
 
-      // 2. 저장 경로 확보 (문서 폴더)
-      final directory = await getApplicationDocumentsDirectory();
-      final String fileName =
-          "정산리포트_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv";
-      final File file = File("${directory.path}/$fileName");
+      // 2. CSV 데이터 생성
+      StringBuffer csvBuffer = StringBuffer();
+      // BOM (\uFEFF) 추가로 엑셀 한글 깨짐 방지
+      csvBuffer.write("\uFEFF구분/상품명,판매량,판매원가,할인액,실매출액\n");
 
-      // 3. 파일 쓰기
-      await file.writeAsString(csvData);
+      int grandQty = 0, grandOrig = 0, grandDisc = 0;
 
-      // 4. 완료 알림 및 경로 안내
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('📄 CSV 파일이 저장되었습니다.\n경로: ${file.path}'),
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(label: '확인', onPressed: () {}),
-          ),
-        );
+      groupedStats.forEach((groupName, products) {
+        csvBuffer.write("[$groupName],,,,\n");
+        int gQty = 0, gOrig = 0, gDisc = 0;
+        for (var p in products) {
+          csvBuffer.write(
+              "${p.name},${p.quantity},${p.originalRevenue},${p.totalDiscount},${p.finalRevenue}\n");
+          gQty += p.quantity;
+          gOrig += p.originalRevenue;
+          gDisc += p.totalDiscount;
+        }
+        csvBuffer
+            .write(" > 소계,${gQty}개,${gOrig},${gDisc},${gOrig - gDisc}\n\n");
+        grandQty += gQty;
+        grandOrig += gOrig;
+        grandDisc += gDisc;
+      });
+
+      csvBuffer.write("----------------,,,,\n");
+      csvBuffer.write(
+          "📊 최종 전체 합계,${grandQty}개,${grandOrig},${grandDisc},${grandOrig - grandDisc}\n");
+
+      // 3. 파일 저장 경로 확보 (Download 폴더)
+      String path;
+      if (Platform.isAndroid) {
+        path = await ExternalPath.getExternalStoragePublicDirectory(
+            ExternalPath.DIRECTORY_DOWNLOAD);
+      } else {
+        // Windows/Desktop 대응
+        final directory = await getDownloadsDirectory();
+        path =
+            directory?.path ?? (await getApplicationDocumentsDirectory()).path;
       }
+
+      final String timeStamp =
+          DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
+      final File file = File("$path/정산상세리포트_$timeStamp.csv");
+
+      // 4. [핵심] 실제 파일 쓰기 실행
+      await file.writeAsString(csvBuffer.toString());
+
+      _showMessage(
+          "✅ CSV 저장이 완료되었습니다!\n경로: $path\n파일명: ${file.path.split('/').last}");
     } catch (e) {
-      print("파일 저장 오류: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('❌ 파일 저장 중 오류가 발생했습니다.')),
-        );
-      }
+      print("CSV 내보내기 에러 상세: $e");
+      _showMessage("❌ 파일 생성 중 오류가 발생했습니다: $e");
+    }
+  }
+
+  void _showMessage(String msg) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 
@@ -514,19 +536,25 @@ class _ProductSettlementScreenState
     final products = ref.read(productProvider).value;
     if (orders == null || products == null) return;
 
-    final stats = _calculateStats(_getFilteredOrders(orders), products);
-    _showExportDialog(stats);
+    // 현재 화면에 표시된 필터 및 그룹화 기준이 적용된 'Map' 데이터를 계산
+    final filtered = _getFilteredOrders(orders);
+    final groupedData = _calculateGroupedStats(filtered, products);
+
+    _showExportDialog(groupedData); // Map 전달
   }
 }
 
 class _SettlementRow {
   final String name;
   int quantity;
-  final int unitPrice;
-  int totalRevenue;
+  int originalRevenue; // 할인 전 총액
+  int totalDiscount; // 해당 상품에서 발생한 총 할인액
+
+  int get finalRevenue => originalRevenue - totalDiscount; // 실매출
+
   _SettlementRow(
       {required this.name,
       required this.quantity,
-      required this.unitPrice,
-      required this.totalRevenue});
+      required this.originalRevenue,
+      required this.totalDiscount});
 }

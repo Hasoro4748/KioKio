@@ -40,6 +40,12 @@ class OrderDao {
     );
   }
 
+  Future<void> updateDiscount(int orderId, int discount) {
+    return (db.update(db.orders)..where((t) => t.id.equals(orderId))).write(
+      OrdersCompanion(discount: Value(discount)),
+    );
+  }
+
   Future<void> approveStatus(OrderModel order) {
     final orderId = order.id;
     return (db.update(db.orders)..where((t) => t.id.equals(orderId!))).write(

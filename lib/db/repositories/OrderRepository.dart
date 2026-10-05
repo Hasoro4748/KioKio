@@ -37,12 +37,23 @@ class OrderRepository {
     final order = await orderDao.getById(orderId);
     final orderItems = await orderItemDao.getByOrderId(orderId);
 
-    return (OrderModel(
+    if (order == null) {
+      return OrderModel(
         id: orderId,
-        items: orderItems.map((e) => OrderItemMapper.fromData(e)).toList(),
-        createdAt: order!.createdAt,
-        status: order.status, // 누락되었다면 추가
-        discount: order.discount));
+        items: [],
+        createdAt: DateTime.now(),
+        status: '알수없음',
+        discount: 0,
+      );
+    }
+
+    return OrderModel(
+      id: orderId,
+      items: orderItems.map((e) => OrderItemMapper.fromData(e)).toList(),
+      createdAt: order.createdAt,
+      status: order.status,
+      discount: order.discount,
+    );
   }
 
   Future<void> addOrder(OrderModel order) async {
@@ -61,6 +72,10 @@ class OrderRepository {
 
   Future<void> updateOrderState(int orderId, String status) async {
     await orderDao.updateStatus(orderId, status);
+  }
+
+  Future<void> updateOrderDiscount(int orderId, int discount) async {
+    await orderDao.updateDiscount(orderId, discount);
   }
 
   Future<void> approveOrderState(OrderModel order) async {

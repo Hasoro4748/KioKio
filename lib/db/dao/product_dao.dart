@@ -7,7 +7,14 @@ class ProductDao {
   ProductDao(this.db);
 
   Future<List<Product>> getAll() {
-    return db.select(db.products).get();
+    return (db.select(db.products)
+          ..orderBy([
+            (t) => OrderingTerm(
+                expression: t.displayOrder, mode: OrderingMode.asc),
+            (t) =>
+                OrderingTerm(expression: t.createdAt, mode: OrderingMode.asc),
+          ]))
+        .get();
   }
 
   Future<Product?> getById(int id) {

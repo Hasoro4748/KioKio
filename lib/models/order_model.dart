@@ -27,7 +27,9 @@ class OrderModel {
       items: (json['items'] as List)
           .map((e) => OrderItemModel.fromJson(e))
           .toList(),
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
       status: json['status'] ?? '처리중',
       discount: json['discount'] ?? 0,
     );
@@ -59,6 +61,7 @@ class OrderItemModel {
   final int productId;
   final String name;
   final int basePrice;
+  final int discount;
   int quantity;
 
   OrderItemModel({
@@ -66,11 +69,12 @@ class OrderItemModel {
     required this.name,
     required this.basePrice,
     required this.quantity,
+    this.discount = 0,
   });
 
   int get unitPrice => basePrice;
 
-  int get totalPrice => basePrice * quantity;
+  int get totalPrice => (basePrice * quantity) - discount;
 
   Map<String, dynamic> toJson() => {
         'productId': productId,
@@ -81,7 +85,7 @@ class OrderItemModel {
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
     return OrderItemModel(
-      productId: json['productId'] ?? '',
+      productId: json['productId'] is int ? json['productId'] : 0,
       name: json['name'] ?? '알 수 없음',
       basePrice: json['basePrice'] ?? 0,
       quantity: json['quantity'] ?? 1,

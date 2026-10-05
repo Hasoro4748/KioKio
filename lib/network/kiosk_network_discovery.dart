@@ -2,14 +2,17 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_nsd/flutter_nsd.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kiosk/models/kiosk_setting_model.dart';
 import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/network/kiosk_network_status.dart';
+import 'package:kiosk/providers/dao_provider.dart';
 import 'package:kiosk/providers/product_providers.dart';
 import 'package:kiosk/providers/product_service_provider.dart';
 import 'package:kiosk/providers/settings_provider.dart';
+import 'package:kiosk/providers/sync_progress_provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
@@ -82,10 +85,33 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
           if (data['type'] == 'PRODUCT_SYNC') {
             print("상품 동기화 메세지 수신");
             final productService = ref.read(productServiceProvider);
+            final syncNotifier = ref.read(syncProgressProvider.notifier);
 
-            await productService.syncProduct(data);
+            final isInitial = data['action'] == 'initial';
 
-            ref.read(productProvider.notifier).reload();
+            // 1. 상품 및 이미지 동기화 실행
+            await productService.syncProduct(
+              data,
+              host,
+              onProgress: (current, total, message) {
+                if (isInitial) {
+                  if (current == 0) {
+                    syncNotifier.startSync(total, message);
+                  } else if (current >= total && message == '동기화 완료!') {
+                    syncNotifier.completeSync(message);
+                  } else {
+                    syncNotifier.updateProgress(current, message);
+                  }
+                }
+              },
+            );
+            ref.invalidate(orderedThemesProvider);
+            ref.invalidate(orderedSellersProvider);
+            ref.invalidate(orderedCategoriesProvider);
+            await ref.read(productProvider.notifier).reload();
+
+            await ref.read(productProvider.notifier).reload();
+
             return;
           }
           if (data['type'] == 'KIOSK_SETTINGS_SYNC') {
@@ -136,7 +162,7 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
           print("연결 종료됨");
           state = KioskStatus.searching;
           _channel = null;
-          Future.delayed(const Duration(seconds: 5), () {
+          Future.delayed(const Duration(seconds: 1), () {
             // 사용자가 수동으로 멈춘 게 아니라면 재탐색 실행
             if (state == KioskStatus.searching) {
               print("자동 재탐색 시작...");
