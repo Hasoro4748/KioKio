@@ -1,3 +1,5 @@
+// lib/network/kiosk_network_discovery.dart 전체 수정
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -27,20 +29,19 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
 
+  bool _isConnecting = false; // ★ 중복 연결 차단용 플래그 추가
+
   void init() {
     _subscription = flutterNsd.stream.listen(
       (NsdServiceInfo serviceInfo) {
-        // 핵심: 이미 연결 중이거나 연결된 상태면 무시
-        if (state == KioskStatus.connected) return;
+        // ★ 이미 연결되었거나, 연결 진행 중이면 연달아 들어오는 탐색 신호 무시
+        if (state == KioskStatus.connected || _isConnecting) return;
 
         if (serviceInfo.hostname != null && serviceInfo.port != null) {
           print(
               "Pos발견! IP: ${serviceInfo.hostname}, port: ${serviceInfo.port}");
 
-          // 발견 즉시 탐색 중단 (연결 시도보다 먼저 수행하여 간섭 방지)
           stopDiscoveryService(onlyNsd: true);
-
-          // 약간의 지연 후 연결 시도 (네이티브 리소스 안정화)
           _connectToPos(serviceInfo.hostname!, serviceInfo.port!);
         }
       },
@@ -51,20 +52,29 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
   }
 
   Future<void> searchForPos() async {
-    if (state == KioskStatus.connected) return;
+    if (state == KioskStatus.connected || _isConnecting) return;
 
     print("pos 탐색 시작");
-    state = KioskStatus.searching; // 상태 업데이트
+    state = KioskStatus.searching;
 
     try {
       await flutterNsd.discoverServices('_kiokio-pos._tcp.');
     } catch (e) {
       print("탐색 시작 실패 : $e");
-      state = KioskStatus.error; // 상태 업데이트
+      state = KioskStatus.error;
     }
   }
 
   void _connectToPos(String host, int port) {
+    // ★ 중복 접속 요청 방지
+    if (state == KioskStatus.connected || _isConnecting) return;
+
+    _isConnecting = true; // 연결 시도 플래그 ON
+
+    // 기존 소켓 채널이 존재한다면 깨끗이 닫고 시작
+    _channel?.sink.close();
+    _channel = null;
+
     final url = 'ws://$host:$port';
     print("Pos 접속 시도: $url");
 
@@ -72,14 +82,14 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
       _channel = IOWebSocketChannel.connect(Uri.parse(url),
           pingInterval: const Duration(seconds: 5));
 
-      state = KioskStatus.connected; // 여기서 상태 변경
-
       _channel!.stream.listen(
         (message) async {
           final data = jsonDecode(message as String);
+
           if (data['event'] == 'connection_confirmed') {
             print("POS 연결 성공! 서버 ID: ${data['sid']}");
             state = KioskStatus.connected;
+            _isConnecting = false; // ★ 연결 완료
             return;
           }
           if (data['type'] == 'PRODUCT_SYNC') {
@@ -89,7 +99,6 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
 
             final isInitial = data['action'] == 'initial';
 
-            // 1. 상품 및 이미지 동기화 실행
             await productService.syncProduct(
               data,
               host,
@@ -110,8 +119,6 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
             ref.invalidate(orderedCategoriesProvider);
             await ref.read(productProvider.notifier).reload();
 
-            await ref.read(productProvider.notifier).reload();
-
             return;
           }
           if (data['type'] == 'KIOSK_SETTINGS_SYNC') {
@@ -121,7 +128,6 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
 
             String finalLogoPath = settingsData['logoPath'] ?? '';
 
-            // 1. 로고 이미지 데이터가 포함되어 있다면 로컬에 저장
             if (imageDatas != null && imageDatas.isNotEmpty) {
               final appDir = await getApplicationDocumentsDirectory();
               final logoDir = Directory(p.join(appDir.path, 'config'));
@@ -132,14 +138,12 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
                 final bytes = base64Decode(entry.value);
                 final file = File(p.join(logoDir.path, entry.key));
                 await file.writeAsBytes(bytes);
-                finalLogoPath = file.path; // 로컬 경로로 업데이트
+                finalLogoPath = file.path;
                 print("키오스크 로고 업데이트 완료: $finalLogoPath");
               }
             }
 
-            // 2. SettingsProvider를 통해 상태 업데이트
             final model = KioskSettingsModel.fromJson(settingsData);
-            // 이미지 파일이 저장되었다면 실제 로컬 경로로 덮어씌움
             final updatedModel = KioskSettingsModel(
               gridCount: model.gridCount,
               logoPath:
@@ -147,6 +151,7 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
               welcomeMessage: model.welcomeMessage,
               waitTime: model.waitTime,
               useIdleScreen: model.useIdleScreen,
+              idleMode: model.idleMode, // ★ 키오스크 수신 시 idleMode 적용!
             );
 
             await ref
@@ -155,16 +160,15 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
             return;
           }
 
-          // 디버그용
           print("Pos 수신 : $message");
         },
         onDone: () {
           print("연결 종료됨");
           state = KioskStatus.searching;
+          _isConnecting = false;
           _channel = null;
           Future.delayed(const Duration(seconds: 1), () {
-            // 사용자가 수동으로 멈춘 게 아니라면 재탐색 실행
-            if (state == KioskStatus.searching) {
+            if (state == KioskStatus.searching && !_isConnecting) {
               print("자동 재탐색 시작...");
               searchForPos();
             }
@@ -172,19 +176,20 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
         },
         onError: (e) {
           print("웹소켓 에러: $e");
-          state = KioskStatus.error;
+          state = KioskStatus.searching;
+          _isConnecting = false;
           _channel = null;
         },
       );
     } catch (e) {
       print("접속 실패: $e");
-      state = KioskStatus.error;
+      state = KioskStatus.searching;
+      _isConnecting = false;
     }
   }
 
   Future<void> stopDiscoveryService({bool onlyNsd = false}) async {
     try {
-      // stopDiscovery는 에러가 자주 발생하므로 조용히 처리
       await flutterNsd.stopDiscovery();
     } catch (e) {
       print("NSD 중지 무시: $e");
@@ -193,6 +198,7 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
     if (!onlyNsd) {
       _channel?.sink.close();
       _channel = null;
+      _isConnecting = false;
       state = KioskStatus.idle;
     }
   }
@@ -207,7 +213,12 @@ class KioskNetworkDiscovery extends StateNotifier<KioskStatus> {
   bool sendOrder(OrderModel order) {
     if (state == KioskStatus.connected && _channel != null) {
       try {
-        final orderJson = jsonEncode(order.toJson());
+        final orderPayload = {
+          'type': 'NEW_ORDER',
+          'order': order.toJson(),
+          'timestamp': DateTime.now().toIso8601String(),
+        };
+        final orderJson = jsonEncode(orderPayload);
 
         _channel!.sink.add(orderJson);
         print("Pos로 주문 전송 완료 : $orderJson");

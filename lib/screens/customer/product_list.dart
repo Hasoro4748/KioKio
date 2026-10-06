@@ -11,8 +11,10 @@ import 'package:kiosk/providers/dao_provider.dart';
 import 'package:kiosk/providers/kiosk_network_provider.dart';
 import 'package:kiosk/providers/order_providers.dart';
 import 'package:kiosk/providers/product_providers.dart';
+import 'package:kiosk/providers/remaining_seconds_provider.dart';
 import 'package:kiosk/providers/settings_provider.dart';
 import 'package:kiosk/providers/sync_progress_provider.dart';
+import 'package:kiosk/providers/user_activity_provider.dart';
 import 'package:kiosk/screens/customer/widgets/cart_panel.dart';
 import 'package:kiosk/screens/customer/widgets/category_chip.dart';
 import 'package:kiosk/screens/customer/widgets/idle_screen.dart';
@@ -75,41 +77,67 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  void _startTimer() {
-    // 1. 현재 설정된 대기화면 사용 여부 확인
-    final settings = ref.read(settingsProvider);
+  bool _hasUserTouched = false;
 
-    // 대기화면 사용 안 함 설정이면 타이머를 취소하고 시간을 초기화한 뒤 종료
-    if (!settings.useKioskIdleScreen) {
+  final ScrollController _scrollController = ScrollController();
+  void _resetScrollPosition() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  void _startTimer() {
+    final settings = ref.read(settingsProvider);
+    final idleMode = settings.kioskIdleMode;
+    final networkStatus = ref.read(kioskNetworkProvider);
+
+    // ★ POS 서버와 정상 연결(connected)된 상태가 아니면 타이머 동작 중지!
+    if (networkStatus != KioskStatus.connected) {
       _countdownTimer?.cancel();
-      setState(() {
-        _remainingSeconds = 999; // 화면에 카운트다운이 뜨지 않도록 충분히 큰 값 설정
-      });
+      _updateSeconds(999);
       return;
     }
 
-    // 2. 사용 중일 때만 기존 로직 수행
+    // 1. OFF 모드일 때
+    if (idleMode == 'off') {
+      _countdownTimer?.cancel();
+      _updateSeconds(999);
+      return;
+    }
+
+    // 2. 대기화면 없이 자동 초기화 모드일 때 (첫 터치 발생 전까지 대기)
+    if (idleMode == 'reset_only' && !_hasUserTouched && cart.isEmpty) {
+      _countdownTimer?.cancel();
+      _updateSeconds(999);
+      return;
+    }
+
+    // 3. 타이머 카운트다운 시작
     final waitTime = settings.kioskWaitTime;
     _countdownTimer?.cancel();
-    setState(() {
-      _remainingSeconds = waitTime > 0 ? waitTime : 15;
-    });
+    _updateSeconds(waitTime > 0 ? waitTime : 15);
 
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      // 타이머 도중이라도 설정이 바뀌면 중단할 수 있도록 한 번 더 체크 (선택 사항)
-      if (!ref.read(settingsProvider).useKioskIdleScreen) {
+      final currentStatus = ref.read(kioskNetworkProvider);
+      final currentMode = ref.read(settingsProvider).kioskIdleMode;
+
+      // ★ 타이머 도중 연결이 끊기거나 OFF 모드가 되면 즉시 중지
+      if (currentStatus != KioskStatus.connected || currentMode == 'off') {
         timer.cancel();
-        setState(() => _remainingSeconds = 999);
+        _updateSeconds(999);
         return;
       }
 
       if (_remainingSeconds > 0) {
-        setState(() {
-          _remainingSeconds--;
-        });
+        _updateSeconds(_remainingSeconds - 1);
       } else {
         timer.cancel();
         _onIdleTimeout();
@@ -117,27 +145,51 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     });
   }
 
+  void _updateSeconds(int seconds) {
+    setState(() {
+      _remainingSeconds = seconds;
+    });
+    ref.read(remainingSecondsProvider.notifier).state = seconds;
+  }
+
   void _onIdleTimeout() {
+    final idleMode = ref.read(settingsProvider).kioskIdleMode;
+
     if (mounted) {
       Navigator.of(context)
           .popUntil((route) => route.isFirst || route.settings.name == '/');
     }
+
     setState(() {
-      _isIdle = true;
       cart.clear(); // 장바구니 초기화
-      initTag(); // 카테고리 필터 초기화
+      initTag(); // 필터 초기화
+      _hasUserTouched = false; // ★ 터치 플래그 리셋
+
+      if (idleMode == 'use_idle') {
+        _isIdle = true; // 대기화면 표출
+      } else {
+        _isIdle = false; // 대기화면 표출 안 함 (상품 화면에 머무름)
+        _remainingSeconds = 999;
+      }
     });
+    _resetScrollPosition();
   }
 
   void _handleUserInteraction([_]) {
-    if (_isIdle) return; // 이미 대기화면이면 무시
-    _startTimer(); // 타이머 리셋
+    final idleMode = ref.read(settingsProvider).kioskIdleMode;
+    if (idleMode == 'off') return;
+
+    if (_isIdle) return;
+
+    _hasUserTouched = true; // ★ 첫 터치 입력 감지!
+    _startTimer();
   }
 
   void initTag() {
     selectedCate = null;
     selectedTheme = null;
     selectedSeller = null;
+    _resetScrollPosition();
   }
 
   List<String> getThemes(
@@ -254,32 +306,159 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('주문 확인'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
           children: [
-            Text('총 ${_totalValue()}개 품목'),
-            const SizedBox(height: 8),
-            Text('최종 결제금액: ${TextUtil.money(_totalPrice())}원',
-                style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: PageColors.price)),
-            const SizedBox(height: 12),
-            const Text('주문하시겠습니까?'),
+            Icon(Icons.shopping_cart_checkout_rounded,
+                color: PageColors.cateSelect, size: 24),
+            SizedBox(width: 8),
+            Text(
+              '주문 내역 확인',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
           ],
+        ),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('주문 품목 리스트',
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+
+              // ★ 1. 주문 상품 목록 (최대 200px 높이 내에서 스크롤 지원)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 220),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: cart.map((item) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            // 상품명 (최대 2줄)
+                            Expanded(
+                              flex: 6,
+                              child: Text(
+                                item.name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 14),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            // 수량
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                '${item.quantity}개',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    color: Colors.grey[700], fontSize: 13),
+                              ),
+                            ),
+                            // 금액
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                '${TextUtil.money(item.totalPrice)}원',
+                                textAlign: TextAlign.end,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: PageColors.price),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+
+              const Divider(height: 24, thickness: 1),
+
+              // ★ 2. 결제 요약 정보 박스
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('총 주문 수량',
+                            style:
+                                TextStyle(fontSize: 14, color: Colors.black54)),
+                        Text('${_totalValue()}개',
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('최종 결제 금액',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold)),
+                        Text(
+                          '${TextUtil.money(_totalPrice())}원',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: PageColors.price,
+                            fontFamily: 'GmarketSans',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+              const Center(
+                child: Text(
+                  '위 내용으로 주문을 진행하시겠습니까?',
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context), child: const Text('취소')),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소', style: TextStyle(color: Colors.grey)),
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              checkout(); // 수정된 checkout 호출
+              checkout();
               setState(() => initTag());
             },
-            child: const Text('주문하기'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: PageColors.cateSelect,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('주문하기',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -327,16 +506,35 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
         ref.read(kioskNetworkProvider.notifier).sendOrder(order);
     ScaffoldMessenger.of(context).removeCurrentSnackBar();
     if (isSent) {
-      final productNotifier = ref.read(productProvider.notifier);
-      final products = ref.read(productProvider).value ?? [];
-      final Map<int, int> stockUpdates = {}; // 차감할 [상품ID : 변경후재고] 맵
+      // ★ 2. 전송 성공 즉시 완료 팝업 노출 및 장바구니 초기화 (체감 속도 0초!)
+      _showOrderCompleteOverlay(context);
+      final cartItems = List<OrderItemModel>.from(cart);
+      setState(() => cart.clear());
 
-      for (var item in cart) {
+      // ★ 3. 로컬 재고 차감은 백그라운드 비동기로 처리 (사용자 대기 시간 0초)
+      _updateLocalStockInBackground(cartItems);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ POS 연결을 확인해주세요.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+    setState(() => cart.clear());
+  }
+
+  Future<void> _updateLocalStockInBackground(
+      List<OrderItemModel> cartItems) async {
+    try {
+      final products = ref.read(productProvider).value ?? [];
+      final Map<int, int> stockUpdates = {};
+
+      for (var item in cartItems) {
         final product =
             products.firstWhereOrNull((p) => p.id == item.productId);
         if (product != null) {
           if (product.isSet && product.componentIds.isNotEmpty) {
-            // 세트 상품: 모든 구성품 재고 차감 계산
             for (var subId in product.componentIds) {
               final subProduct =
                   products.firstWhereOrNull((p) => p.id == subId);
@@ -347,28 +545,21 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
               }
             }
           } else {
-            // 일반 상품: 본인 재고 차감 계산
             final currentStock = stockUpdates[product.id] ?? product.stock;
             stockUpdates[product.id] =
                 (currentStock - item.quantity).clamp(0, 99999).toInt();
           }
         }
       }
+
       if (stockUpdates.isNotEmpty) {
         await ref
             .read(productProvider.notifier)
             .updateProductsStockBatch(stockUpdates);
       }
-      _showOrderCompleteOverlay(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('❌ POS 연결을 확인해주세요.'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+    } catch (e) {
+      print("로컬 재고 차감 실패: $e");
     }
-    setState(() => cart.clear());
   }
 
   String generateOrderNumber() {
@@ -567,31 +758,53 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   Widget build(BuildContext context) {
     final useIdleScreen =
         ref.watch(settingsProvider.select((s) => s.useKioskIdleScreen));
+
     final logoPath = ref.watch(settingsProvider.select((s) => s.kioskLogoPath));
     final WelcomeMessage =
         ref.watch(settingsProvider.select((s) => s.kioskWelcomeMessage));
-    ref.listen<AppSettings>(settingsProvider, (previous, next) {
-      if (!next.useKioskIdleScreen) {
+
+    // ★ 1. POS 연결 상태 변경 리스너:
+    // POS와 연결이 성공(connected)하는 순간 타이머 자동 시작!
+    ref.listen<KioskStatus>(kioskNetworkProvider, (previous, next) {
+      if (next == KioskStatus.connected) {
+        _startTimer(); // 👈 연결 완료 시 타이머 시작!
+      } else {
         _countdownTimer?.cancel();
-        setState(() => _remainingSeconds = 999);
-      } else if (previous?.useKioskIdleScreen == false &&
-          next.useKioskIdleScreen == true) {
-        // 꺼져있다 켜졌을 때 타이머 다시 시작
-        _startTimer();
+        _updateSeconds(999);
+        setState(() => _isIdle = false);
       }
     });
 
-    if (_isIdle && useIdleScreen) {
+    // ★ 2. POS 환경설정(idleMode) 변경 리스너:
+    // 대기화면 모드가 변경되면 타이머 재설정!
+    ref.listen<AppSettings>(settingsProvider, (previous, next) {
+      if (previous?.kioskIdleMode != next.kioskIdleMode) {
+        _startTimer(); // 👈 설정 변경 시 타이머 재시작!
+      }
+    });
+
+    // ★ 3. 팝업 창 등 전역 터치 발생 리스너:
+    ref.listen<int>(userActivityProvider, (previous, next) {
+      _handleUserInteraction();
+    });
+
+    // 'use_idle' 모드이면서 _isIdle이 true일 때 대기화면 표출
+    if (_isIdle && ref.watch(settingsProvider).kioskIdleMode == 'use_idle') {
       return IdleScreen(
-          welcomeMessage: WelcomeMessage,
-          logoPath: logoPath, // 로고 경로 전달
-          onStart: () {
-            setState(() => _isIdle = false);
-            _startTimer();
+        welcomeMessage: WelcomeMessage,
+        logoPath: logoPath,
+        onStart: () {
+          setState(() {
+            _isIdle = false;
+            _hasUserTouched = true;
           });
+          _startTimer();
+          _resetScrollPosition();
+        },
+      );
     }
 
-    // 2. 본래 화면을 Listener로 감싸서 터치 감지
+    // 본래 키오스크 메인 화면
     return Listener(
       onPointerDown: _handleUserInteraction,
       behavior: HitTestBehavior.translucent,
@@ -937,12 +1150,15 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                                         product: product.copyWith(
                                                             stock:
                                                                 availableToOrder),
-                                                        onAddCart: (quantity) {
+                                                        onAddCart:
+                                                            (targetProduct,
+                                                                quantity) {
                                                           final existing = cart
                                                               .firstWhereOrNull(
                                                             (e) =>
                                                                 e.productId ==
-                                                                product.id,
+                                                                targetProduct
+                                                                    .id,
                                                           );
 
                                                           setState(() {
@@ -954,12 +1170,14 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                                               cart.add(
                                                                 OrderItemModel(
                                                                   productId:
-                                                                      product
+                                                                      targetProduct
                                                                           .id,
-                                                                  name: product
-                                                                      .name,
-                                                                  basePrice: product
-                                                                      .basePrice,
+                                                                  name:
+                                                                      targetProduct
+                                                                          .name,
+                                                                  basePrice:
+                                                                      targetProduct
+                                                                          .basePrice,
                                                                   quantity:
                                                                       quantity,
                                                                 ),
@@ -999,25 +1217,20 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                           totalPrice: _totalPrice(),
                                           getStock: (productId) =>
                                               _getStock(products, productId),
-                                          onClear: () {
-                                            setState(() {
-                                              cart.clear();
-                                            });
-                                          },
-                                          onIncrease: (item) {
-                                            setState(() {
-                                              item.quantity++;
-                                            });
-                                          },
-                                          onDecrease: (item) {
-                                            setState(() {
-                                              if (item.quantity > 1) {
-                                                item.quantity--;
-                                              } else {
-                                                cart.remove(item);
-                                              }
-                                            });
-                                          },
+                                          onClear: () =>
+                                              setState(() => cart.clear()),
+                                          onRemoveItem: (item) => setState(() =>
+                                              cart.remove(
+                                                  item)), // ★ 개별 X 삭제 추가
+                                          onIncrease: (item) =>
+                                              setState(() => item.quantity++),
+                                          onDecrease: (item) => setState(() {
+                                            if (item.quantity > 1) {
+                                              item.quantity--;
+                                            } else {
+                                              cart.remove(item);
+                                            }
+                                          }),
                                           onCheckout: _confirmCheckout,
                                         ),
                                       ),
@@ -1192,17 +1405,17 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
       context: context,
       builder: (_) => ProductDetailDialog(
         product: product.copyWith(stock: availableToOrder),
-        onAddCart: (quantity) {
+        onAddCart: (targetProduct, quantity) {
           final existing =
-              cart.firstWhereOrNull((e) => e.productId == product.id);
+              cart.firstWhereOrNull((e) => e.productId == targetProduct.id);
           setState(() {
             if (existing != null) {
               existing.quantity += quantity;
             } else {
               cart.add(OrderItemModel(
-                productId: product.id,
-                name: product.name,
-                basePrice: product.basePrice,
+                productId: targetProduct.id,
+                name: targetProduct.name,
+                basePrice: targetProduct.basePrice,
                 quantity: quantity,
               ));
             }

@@ -17,4 +17,9 @@ class ProductImages extends Table {
   BoolColumn get isThumbnail => boolean().withDefault(const Constant(false))();
 
   DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  List<Set<Column>> get indexes => [
+        {productId},
+      ];
 }

@@ -1,9 +1,12 @@
+// lib/screens/counter/counter_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:kiosk/models/order_model.dart';
 import 'package:kiosk/providers/order_providers.dart';
 import 'package:kiosk/providers/pos_network_service_provider.dart';
+import 'package:kiosk/providers/settings_provider.dart';
 import 'package:kiosk/screens/counter/pages/order_total_screen.dart';
 import 'package:kiosk/screens/counter/pages/pos_screen.dart';
 import 'package:kiosk/screens/counter/pages/product_manage_screen.dart';
@@ -28,6 +31,7 @@ class CounterMainScreen extends ConsumerStatefulWidget {
 
 class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
   int currentIndex = 0;
+  bool _isPendingSheetOpen = false; // 바텀시트 중복 열림 방지 플래그
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +41,24 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
     final isBroadcasting =
         networkState.status == PosBroadcastStatus.broadcasting;
     final connectedCount = networkState.connectedKiosks;
+
+    // ★ 키오스크에서 신규 주문이 수신되면 결제 대기 주문 바텀시트 자동 팝업!
+    ref.listen<AsyncValue<List<OrderModel>>>(orderProvider, (previous, next) {
+      final autoPopup = ref.read(settingsProvider).autoPopupPendingOrders;
+      if (!autoPopup) return; // OFF 일 경우 자동 팝업 스킵
+
+      final prevPendingCount =
+          previous?.value?.where((o) => o.status == '처리중').length ?? 0;
+      final nextPendingList =
+          next.value?.where((o) => o.status == '처리중').toList() ?? [];
+
+      if (nextPendingList.length > prevPendingCount &&
+          nextPendingList.isNotEmpty) {
+        if (!_isPendingSheetOpen && mounted) {
+          _showPendingOrders(nextPendingList, rs);
+        }
+      }
+    });
 
     final pendingOrders = orderAsync.when(
       data: (orders) {
@@ -50,9 +72,7 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
     );
 
     final width = MediaQuery.of(context).size.width;
-
     final isDesktop = width >= 900;
-
     final isPendingLoading = orderAsync.isLoading;
 
     final pages = [
@@ -85,7 +105,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                     ),
                   ),
                 ),
-                // 1. 서버 시작/중지 토글 버튼 추가
                 IconButton(
                   onPressed: () {
                     if (isBroadcasting) {
@@ -108,8 +127,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                   ),
                   tooltip: isBroadcasting ? '서버 중지' : '서버 시작',
                 ),
-
-                // 2. 연결된 키오스크 숫자 표시 (배지 형태)
                 if (connectedCount > 0)
                   Center(
                     child: Container(
@@ -129,8 +146,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                       ),
                     ),
                   ),
-
-                // 3. 메인화면으로 돌아가기 버튼 (모바일에서도 필요할 경우)
                 IconButton(
                   onPressed: () {
                     Navigator.pushAndRemoveUntil(
@@ -150,7 +165,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
           isDesktop
               ? Row(
                   children: [
-                    // --- 커스텀 사이드바 시작 ---
                     Container(
                       width: 110,
                       decoration: BoxDecoration(
@@ -164,12 +178,10 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                       ),
                       child: Column(
                         children: [
-                          const SizedBox(height: 30), // 상단 여백 축소 (40 -> 30)
-                          const Icon(Icons.storefront,
-                              color: PageColors.textBlue, size: 32), // 로고 크기 축소
                           const SizedBox(height: 30),
-
-                          // 1. 메뉴 리스트를 스크롤 가능하게 감쌉니다.
+                          const Icon(Icons.storefront,
+                              color: PageColors.textBlue, size: 32),
+                          const SizedBox(height: 30),
                           Expanded(
                             child: SingleChildScrollView(
                               physics: const BouncingScrollPhysics(),
@@ -190,8 +202,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                               ),
                             ),
                           ),
-
-                          // 2. 하단 시스템 제어 영역 (최소한의 공간만 차지하도록 수정)
                           Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
@@ -200,11 +210,11 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                                   top: Radius.circular(24)),
                             ),
                             child: Column(
-                              mainAxisSize: MainAxisSize.min, // 추가
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 _buildServerControl(
                                     isBroadcasting, connectedCount),
-                                const SizedBox(height: 12), // 간격 축소 (20 -> 12)
+                                const SizedBox(height: 12),
                                 _buildSideIconButton(
                                   icon: Icons.home_rounded,
                                   color: PageColors.textBlue.withOpacity(0.8),
@@ -224,11 +234,8 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                         ],
                       ),
                     ),
-                    // --- 커스텀 사이드바 끝 ---
-
                     Expanded(
                       child: Container(
-                        // 메인 배경을 테마의 가장 밝은 색상으로 설정
                         color: const Color(0xFFFCFDFF),
                         child: pages[currentIndex],
                       ),
@@ -260,8 +267,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
             ),
         ],
       ),
-
-      //모바일 환경
       bottomNavigationBar: isDesktop
           ? null
           : BottomNavigationBar(
@@ -278,7 +283,7 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                 BottomNavigationBarItem(
                     icon: Icon(Icons.analytics_outlined), label: '주문통계'),
                 BottomNavigationBarItem(
-                    icon: Icon(Icons.assessment_outlined), label: '판매정산'), // 추가
+                    icon: Icon(Icons.assessment_outlined), label: '판매정산'),
                 BottomNavigationBarItem(
                     icon: Icon(Icons.inventory_2_outlined), label: '상품관리'),
                 BottomNavigationBarItem(
@@ -288,11 +293,15 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
     );
   }
 
+  /// 결제 대기 주문 바텀시트 팝업
   void _showPendingOrders(List<OrderModel> pendingOrders, Responsive rs) {
+    if (_isPendingSheetOpen) return; // 이미 열려있다면 중복 방지
+    _isPendingSheetOpen = true;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent, // 투명하게 설정하여 커스텀 컨테이너 사용
+      backgroundColor: Colors.transparent,
       builder: (_) {
         return Container(
           height: MediaQuery.of(context).size.height * 0.75,
@@ -303,7 +312,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
           child: Column(
             children: [
               const SizedBox(height: 12),
-              // 상단 핸들바
               Container(
                   width: 40,
                   height: 4,
@@ -311,7 +319,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                       color: Colors.grey[300],
                       borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 20),
-
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Row(
@@ -338,7 +345,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
               Expanded(
                 child: pendingOrders.isEmpty
                     ? _buildEmptyPendingState()
@@ -359,7 +365,9 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
           ),
         );
       },
-    );
+    ).whenComplete(() {
+      _isPendingSheetOpen = false; // 바텀시트 닫힐 때 플래그 복구
+    });
   }
 
   Widget _buildEmptyPendingState() {
@@ -377,7 +385,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
     );
   }
 
-  // 개별 주문 카드 UI
   Widget _buildPendingOrderCard(
       OrderModel order, int minutesAgo, Responsive rs) {
     String firstItemName =
@@ -397,13 +404,12 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
         ],
       ),
       child: InkWell(
-        onTap: () => _openOrderDetail(order, rs), // 상세 다이얼로그 호출 헬퍼
+        onTap: () => _openOrderDetail(order, rs),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              // 왼쪽: 시간 표시 배지
               Container(
                 width: 60,
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -426,8 +432,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                 ),
               ),
               const SizedBox(width: 16),
-
-              // 중간: 주문 정보
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -456,8 +460,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                   ],
                 ),
               ),
-
-              // 오른쪽: 금액 및 화살표
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -487,28 +489,27 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
         rs: rs,
         onDelete: () async {
           await ref.read(orderProvider.notifier).deleteOrder(order);
-          if (ctx.mounted) Navigator.pop(ctx); // ★ 다이얼로그 닫기
+          if (ctx.mounted) Navigator.pop(ctx);
         },
         onCancel: () async {
           await ref.read(orderProvider.notifier).cancelOrder(order);
-          if (ctx.mounted) Navigator.pop(ctx); // ★ 다이얼로그 닫기
+          if (ctx.mounted) Navigator.pop(ctx);
         },
         onApprove: () async {
           await ref.read(orderProvider.notifier).approveOrder(order);
-          if (ctx.mounted) Navigator.pop(ctx); // ★ 다이얼로그 닫기
+          if (ctx.mounted) Navigator.pop(ctx);
         },
       ),
     );
   }
 
-  // 메뉴 버튼 빌더
   Widget _buildNavButton(int index, IconData icon, String label) {
     final isSelected = currentIndex == index;
     return InkWell(
       onTap: () => setState(() => currentIndex = index),
       child: Container(
         width: double.infinity,
-        height: 75, // 버튼 높이 축소 (85 -> 75)
+        height: 75,
         decoration: BoxDecoration(
           border: isSelected
               ? const Border(
@@ -526,16 +527,16 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
               color: isSelected
                   ? PageColors.cateSelect
                   : PageColors.textBlue.withOpacity(0.5),
-              size: 24, // 아이콘 크기 축소 (28 -> 24)
+              size: 24,
             ),
-            const SizedBox(height: 6), // 간격 축소 (8 -> 6)
+            const SizedBox(height: 6),
             Text(
               label,
               style: TextStyle(
                 color: isSelected
                     ? PageColors.cateSelect
                     : PageColors.textBlue.withOpacity(0.6),
-                fontSize: 12, // 폰트 크기 축소 (13 -> 12)
+                fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500,
                 fontFamily: 'GmarketSans',
               ),
@@ -546,7 +547,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
     );
   }
 
-// 서버 제어 버튼
   Widget _buildServerControl(bool isBroadcasting, int connectedCount) {
     return Column(
       children: [
@@ -567,7 +567,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
                   height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    // 가동 중일 때 테마의 밝은 남색 활용
                     color: PageColors.themeSelect.withOpacity(0.2),
                   ),
                 ),
@@ -616,7 +615,6 @@ class _CounterMainScreenState extends ConsumerState<CounterMainScreen> {
     );
   }
 
-// 일반 아이콘 버튼 빌더
   Widget _buildSideIconButton({
     required IconData icon,
     required Color color,

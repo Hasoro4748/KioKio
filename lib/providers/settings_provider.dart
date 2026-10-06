@@ -32,6 +32,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         kioskWelcomeMessage: '터치하여 주문을 시작하세요',
         kioskWaitTime: 15,
         useKioskIdleScreen: true,
+        autoPopupPendingOrders: true,
+        kioskIdleMode: 'use_idle',
       );
 
   // 로컬 저장소에서 데이터 로드
@@ -43,6 +45,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       kioskWaitTime: _service.getKioskWaitTime(15),
       kioskWelcomeMessage: _service.getKioskWelcomeMessage('터치하여 주문을 시작하세요'),
       useKioskIdleScreen: _service.getUseKioskIdleScreen(true),
+      autoPopupPendingOrders: _service.getAutoPopupPendingOrders(true),
+      kioskIdleMode: _service.getKioskIdleMode('use_idle'),
     );
   }
 
@@ -53,6 +57,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     await _service.setKioskWaitTime(settings.waitTime);
     await _service.setKioskWelcomeMessage(settings.welcomeMessage);
     await _service.setUseKioskIdleScreen(settings.useIdleScreen);
+    await _service.setKioskIdleMode(settings.idleMode);
 
     state = state.copyWith(
       kioskGridCount: settings.gridCount,
@@ -60,6 +65,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       kioskWaitTime: settings.waitTime,
       kioskWelcomeMessage: settings.welcomeMessage,
       useKioskIdleScreen: settings.useIdleScreen,
+      kioskIdleMode: settings.idleMode,
     );
   }
 
@@ -68,15 +74,22 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     await _service.setProductManageGridCount(count);
     state = state.copyWith(productManageGridCount: count);
   }
+
+  Future<void> updateAutoPopupPendingOrders(bool value) async {
+    await _service.setAutoPopupPendingOrders(value);
+    state = state.copyWith(autoPopupPendingOrders: value);
+  }
 }
 
 class AppSettings {
-  final int productManageGridCount; // POS용
-  final int kioskGridCount; // 키오스크용
+  final int productManageGridCount;
+  final int kioskGridCount;
   final String kioskLogoPath;
   final String kioskWelcomeMessage;
   final int kioskWaitTime;
   final bool useKioskIdleScreen;
+  final bool autoPopupPendingOrders;
+  final String kioskIdleMode;
 
   AppSettings({
     required this.productManageGridCount,
@@ -85,9 +98,10 @@ class AppSettings {
     required this.kioskWelcomeMessage,
     required this.kioskWaitTime,
     required this.useKioskIdleScreen,
+    this.autoPopupPendingOrders = true,
+    required this.kioskIdleMode,
   });
 
-  // 모든 필드를 포함한 copyWith
   AppSettings copyWith({
     int? productManageGridCount,
     int? kioskGridCount,
@@ -95,6 +109,8 @@ class AppSettings {
     String? kioskWelcomeMessage,
     int? kioskWaitTime,
     bool? useKioskIdleScreen,
+    bool? autoPopupPendingOrders,
+    String? kioskIdleMode,
   }) {
     return AppSettings(
       productManageGridCount:
@@ -104,6 +120,9 @@ class AppSettings {
       kioskWelcomeMessage: kioskWelcomeMessage ?? this.kioskWelcomeMessage,
       kioskWaitTime: kioskWaitTime ?? this.kioskWaitTime,
       useKioskIdleScreen: useKioskIdleScreen ?? this.useKioskIdleScreen,
+      autoPopupPendingOrders:
+          autoPopupPendingOrders ?? this.autoPopupPendingOrders,
+      kioskIdleMode: kioskIdleMode ?? this.kioskIdleMode,
     );
   }
 }

@@ -114,7 +114,7 @@ class _ProductImagesSliderState extends State<ProductImagesSlider> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
-              widget.images.length - 1,
+              widget.images.length > 0 ? widget.images.length - 1 : 0,
               (index) {
                 final bool isSelected = currentIndex == index;
 

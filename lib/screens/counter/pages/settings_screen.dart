@@ -1,3 +1,5 @@
+// lib/screens/counter/pages/settings_screen.dart
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -25,7 +27,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    // 초기값 로드
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _welcomeController.text = ref.read(settingsProvider).kioskWelcomeMessage;
     });
@@ -37,30 +38,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.dispose();
   }
 
-  // 로고 선택 로직
   Future<void> _pickLogo() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      // 로컬 설정을 먼저 업데이트 (이미지 경로는 나중에 동기화 시 데이터로 변환)
-      // 실제 구현 시에는 앱 내부 폴더로 복사하는 과정이 권장됩니다.
+      final current = ref.read(settingsProvider);
       await ref.read(settingsProvider.notifier).updateKioskSettings(
             KioskSettingsModel(
-              gridCount: ref.read(settingsProvider).kioskGridCount,
+              gridCount: current.kioskGridCount,
               logoPath: image.path,
               welcomeMessage: _welcomeController.text,
-              waitTime: ref.read(settingsProvider).kioskWaitTime,
-              useIdleScreen: ref.read(settingsProvider).useKioskIdleScreen,
+              waitTime: current.kioskWaitTime,
+              useIdleScreen: current.useKioskIdleScreen,
+              idleMode: current.kioskIdleMode, // ★ idleMode 유지
             ),
           );
     }
   }
 
-  // 키오스크로 설정 전송 (동기화)
   Future<void> _syncToKiosks() async {
     final settings = ref.read(settingsProvider);
     Map<String, String>? imageDatas;
 
-    // 로고 이미지가 있다면 Base64로 변환하여 동기화 메시지에 포함
     if (settings.kioskLogoPath.isNotEmpty) {
       final file = File(settings.kioskLogoPath);
       if (await file.exists()) {
@@ -78,6 +76,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       welcomeMessage: _welcomeController.text,
       waitTime: settings.kioskWaitTime,
       useIdleScreen: settings.useKioskIdleScreen,
+      idleMode: settings.kioskIdleMode, // ★ idleMode 동기화 모델에 포함!
     );
 
     ref
@@ -85,7 +84,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         .broadcastKioskSettings(model, imageDatas: imageDatas);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ 모든 키오스크에 설정이 적용되었습니다.')),
+      const SnackBar(content: Text('✅ 모든 키오스크에 설정이 동기화되었습니다.')),
     );
   }
 
@@ -105,23 +104,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: Column(
           children: [
             // 1. POS 관리 설정 섹션
-            // _buildSection(
-            //   title: 'POS 관리 화면 설정',
-            //   icon: Icons.monitor,
-            //   children: [
-            //     _buildSliderTile(
-            //       label: '상품 관리 그리드 개수',
-            //       value: settings.productManageGridCount.toDouble(),
-            //       min: 5,
-            //       max: 10,
-            //       onChanged: (val) => ref
-            //           .read(settingsProvider.notifier)
-            //           .updateProductManageGridCount(val.toInt()),
-            //       trailing: '${settings.productManageGridCount}개',
-            //     ),
-            //   ],
-            // ),
-            // const SizedBox(height: 24),
+            _buildSection(
+              title: 'POS 관리 화면 설정',
+              icon: Icons.monitor,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      // ★ 신규 주문 자동 팝업 스위치 (OFF 시에도 뚜렷하게 보이도록 색상 명시)
+                      SwitchListTile(
+                        title: const Text('신규 주문 자동 팝업',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle:
+                            const Text('키오스크에서 새 주문 접수 시 대기 주문 창을 자동으로 띄웁니다.'),
+                        value: settings.autoPopupPendingOrders,
+                        activeColor: PageColors.cateSelect,
+                        activeTrackColor:
+                            PageColors.cateSelect.withOpacity(0.3),
+                        inactiveThumbColor: Colors.grey[600], // 비활성 버튼: 짙은 회색
+                        inactiveTrackColor: Colors.grey[300], // 비활성 트랙: 연회색
+                        onChanged: (val) {
+                          ref
+                              .read(settingsProvider.notifier)
+                              .updateAutoPopupPendingOrders(val);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
 
             // 2. 원격 키오스크 제어 섹션
             _buildSection(
@@ -129,7 +147,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               icon: Icons.settings_remote,
               color: Colors.orangeAccent,
               children: [
-                // 로고 설정
                 ListTile(
                   title: const Text('키오스크 상단 로고'),
                   subtitle: const Text('키오스크 화면 상단에 표시될 이미지를 선택하세요.'),
@@ -140,7 +157,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onTap: _pickLogo,
                 ),
                 const Divider(),
-                // 그리드 설정
                 _buildSliderTile(
                   label: '키오스크 상품 한 줄 개수',
                   value: settings.kioskGridCount.toDouble(),
@@ -151,7 +167,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   trailing: '${settings.kioskGridCount}개',
                 ),
                 const Divider(),
-                // 대기 시간 설정
                 _buildSliderTile(
                   label: '자동 초기화 대기 시간',
                   value: settings.kioskWaitTime.toDouble(),
@@ -162,15 +177,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   trailing: '${settings.kioskWaitTime}초',
                 ),
                 const Divider(),
-                // 대기화면 사용 여부
-                SwitchListTile(
-                  title: const Text('대기화면(광고) 사용'),
-                  subtitle: const Text('일정 시간 미조작 시 대기화면으로 전환합니다.'),
-                  value: settings.useKioskIdleScreen,
-                  onChanged: (val) => _updateKioskSettingsState(useIdle: val),
+                // ★ 대기화면 사용 스위치 (OFF 시에도 뚜렷하게 보이도록 색상 명시)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Text('대기화면 및 자동 초기화 모드',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15)),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('대기화면(광고) 및 자동 초기화 사용',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: const Text('미조작 시 대기화면으로 전환되고 장바구니가 초기화됩니다.'),
+                      value: 'use_idle',
+                      groupValue: settings.kioskIdleMode,
+                      activeColor: PageColors.cateSelect,
+                      onChanged: (val) =>
+                          _updateKioskSettingsState(idleMode: val),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('대기화면 없이 자동 초기화',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: const Text(
+                          '대기화면 없이 상품 화면에 머물며, 첫 터치 후 미조작 시 장바구니를 초기화합니다.'),
+                      value: 'reset_only',
+                      groupValue: settings.kioskIdleMode,
+                      activeColor: PageColors.cateSelect,
+                      onChanged: (val) =>
+                          _updateKioskSettingsState(idleMode: val),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('사용 안 함 (OFF)',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: const Text('대기화면 전환 및 자동 초기화 기능을 모두 끕니다.'),
+                      value: 'off',
+                      groupValue: settings.kioskIdleMode,
+                      activeColor: PageColors.cateSelect,
+                      onChanged: (val) =>
+                          _updateKioskSettingsState(idleMode: val),
+                    ),
+                  ],
                 ),
                 const Divider(),
-                // 웰컴 메시지
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: TextField(
@@ -188,7 +239,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
             const SizedBox(height: 40),
 
-            // 전송 버튼
             SizedBox(
               width: double.infinity,
               height: 60,
@@ -214,9 +264,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  // 상태만 로컬에서 변경하는 헬퍼 (저장 및 동기화 버튼 클릭 전 단계)
   void _updateKioskSettingsState(
-      {int? gridCount, int? waitTime, bool? useIdle, String? welcome}) {
+      {int? gridCount,
+      int? waitTime,
+      bool? useIdle,
+      String? welcome,
+      String? idleMode}) {
     final current = ref.read(settingsProvider);
     ref.read(settingsProvider.notifier).updateKioskSettings(
           KioskSettingsModel(
@@ -225,6 +278,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             welcomeMessage: welcome ?? _welcomeController.text,
             waitTime: waitTime ?? current.kioskWaitTime,
             useIdleScreen: useIdle ?? current.useKioskIdleScreen,
+            idleMode: idleMode ?? current.kioskIdleMode, // ★ idleMode 유지
           ),
         );
   }
@@ -282,6 +336,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               min: min,
               max: max,
               divisions: (max - min).toInt(),
+              activeColor: PageColors.cateSelect,
+              inactiveColor: Colors.grey[300], // 비활성 트랙: 연회색
               onChanged: onChanged,
             ),
           ),

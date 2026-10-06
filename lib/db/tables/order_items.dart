@@ -18,4 +18,9 @@ class OrderItems extends Table {
 
   IntColumn get quantity => integer()();
   IntColumn get discount => integer().withDefault(const Constant(0))();
+
+  @override
+  List<Set<Column>> get indexes => [
+        {orderId},
+      ];
 }

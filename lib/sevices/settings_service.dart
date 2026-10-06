@@ -10,6 +10,8 @@ class SettingsService {
   static const String _keyKioskWaitTime = 'kiosk_wait_time';
   static const String _keyKioskWelcome = 'kiosk_welcome_msg';
   static const String _keyUseIdle = 'use_kiosk_idle';
+  static const String _keyAutoPopupPendingOrders = 'auto_popup_pending_orders';
+  static const String _keyKioskIdleMode = 'kiosk_idle_mode';
 
   Future<void> setProductManageGridCount(int count) async {
     await _prefs.setInt(_keyProductManageGridCount, count);
@@ -57,5 +59,21 @@ class SettingsService {
 
   bool getUseKioskIdleScreen(bool defaultValue) {
     return _prefs.getBool(_keyUseIdle) ?? defaultValue;
+  }
+
+  Future<void> setAutoPopupPendingOrders(bool value) async {
+    await _prefs.setBool(_keyAutoPopupPendingOrders, value);
+  }
+
+  bool getAutoPopupPendingOrders(bool defaultValue) {
+    return _prefs.getBool(_keyAutoPopupPendingOrders) ?? defaultValue;
+  }
+
+  Future<void> setKioskIdleMode(String mode) async {
+    await _prefs.setString(_keyKioskIdleMode, mode);
+  }
+
+  String getKioskIdleMode(String defaultValue) {
+    return _prefs.getString(_keyKioskIdleMode) ?? defaultValue;
   }
 }

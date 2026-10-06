@@ -230,7 +230,7 @@ class AppDatabase extends _$AppDatabase {
 }
 
 /// =========================
-/// DB Connection
+/// DB Connection (WAL 모드 및 시스템 튜닝 적용)
 /// =========================
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
@@ -240,6 +240,21 @@ LazyDatabase _openConnection() {
       p.join(dir.path, 'kiokio.sqlite'),
     );
 
-    return NativeDatabase.createInBackground(file);
+    return NativeDatabase.createInBackground(
+      file,
+      setup: (database) {
+        // ★ 1. WAL (Write-Ahead Logging) 모드 활성화 (읽기/쓰기 동시성 확보)
+        database.execute('PRAGMA journal_mode=WAL;');
+
+        // ★ 2. 동기화 레벨 최적화 (안전성과 속도의 최적 밸런스)
+        database.execute('PRAGMA synchronous=NORMAL;');
+
+        // ★ 3. 외래키(Foreign Key) 제약조건 활성화
+        database.execute('PRAGMA foreign_keys=ON;');
+
+        // ★ 4. 임시 데이터 쿼리 처리를 RAM 메모리 상에서 수행
+        database.execute('PRAGMA temp_store=MEMORY;');
+      },
+    );
   });
 }

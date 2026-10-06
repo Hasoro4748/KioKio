@@ -52,11 +52,16 @@ class PosNetworkService extends StateNotifier<PosNetworkState> {
           webSocket.stream.listen((message) {
             try {
               final Map<String, dynamic> data = jsonDecode(message as String);
-              final receivedOrder = OrderModel.fromJson(data);
-              print("새로운 주문 수신: ${receivedOrder.items.length}개 항목");
-              ref.read(orderProvider.notifier).addOrder(receivedOrder);
+
+              // ★ NEW_ORDER 타입 주문 패킷 정밀 수신
+              if (data['type'] == 'NEW_ORDER' && data['order'] != null) {
+                final receivedOrder = OrderModel.fromJson(data['order']);
+                print(
+                    "새로운 주문 수신: #${receivedOrder.id ?? ''} (${receivedOrder.items.length}개 항목)");
+                ref.read(orderProvider.notifier).addOrder(receivedOrder);
+              }
             } catch (e) {
-              print("주문 데이터 파싱 실패");
+              print("주문 데이터 파싱 실패: $e");
             }
           }, onDone: () {
             _clients.remove(webSocket);

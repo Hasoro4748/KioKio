@@ -691,13 +691,27 @@ class _ProductManageScreenState extends ConsumerState<ProductManageScreen> {
   Widget _buildProductGridItem(ProductModel product, Responsive rs) {
     final isLowStock = product.stock <= 5;
     final isSelected = _selectedProducts.contains(product);
+    // ★ 세트 구성 선택 모드일 때 기존 세트 상품은 선택 불가 처리
+    final bool isDisabledInSelection = _isSelectionMode && product.isSet;
 
     return Material(
-      color: isSelected ? Colors.blue[50] : Colors.white,
+      color: isSelected
+          ? Colors.blue[50]
+          : (isDisabledInSelection ? Colors.grey[100] : Colors.white),
       borderRadius: BorderRadius.circular(rs.radius(8)),
       child: InkWell(
         onTap: () {
           if (_isSelectionMode) {
+            // ★ 세트 상품 터치 차단 및 안내 스낵바 출력
+            if (product.isSet) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('⚠️ 세트 상품은 세트 구성품으로 선택할 수 없습니다.'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+              return;
+            }
             setState(() {
               if (isSelected) {
                 _selectedProducts.remove(product);
@@ -740,6 +754,24 @@ class _ProductManageScreenState extends ConsumerState<ProductManageScreen> {
                                     style: TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold)))),
+
+                      // ★ 세트 구성 선택 모드일 때 세트 상품 시각적 비활성화 오버레이
+                      if (isDisabledInSelection)
+                        Container(
+                          color: Colors.black45,
+                          child: const Center(
+                            child: Text(
+                              '선택 불가\n(세트 상품)',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+
                       Positioned(
                         bottom: 4,
                         right: 4,
@@ -774,15 +806,21 @@ class _ProductManageScreenState extends ConsumerState<ProductManageScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: rs.font(13)),
+                            fontWeight: FontWeight.bold,
+                            fontSize: rs.font(13),
+                            color: isDisabledInSelection
+                                ? Colors.grey
+                                : Colors.black,
+                          ),
                         ),
                         Text(
                           '${TextUtil.money(product.basePrice)}원',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              color: PageColors.price,
+                              color: isDisabledInSelection
+                                  ? Colors.grey
+                                  : PageColors.price,
                               fontWeight: FontWeight.w700,
                               fontSize: rs.font(12)),
                         ),
@@ -792,7 +830,8 @@ class _ProductManageScreenState extends ConsumerState<ProductManageScreen> {
                 ),
               ],
             ),
-            if (_isSelectionMode)
+            // 선택 가능한 단품에만 체크박스 동그라미 노출
+            if (_isSelectionMode && !product.isSet)
               Positioned(
                 top: 4,
                 right: 4,

@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kiosk/models/product_model.dart';
 import 'package:kiosk/providers/product_providers.dart';
+import 'package:kiosk/providers/remaining_seconds_provider.dart';
 import 'package:kiosk/screens/customer/widgets/product_image_slider.dart';
 import 'package:kiosk/theme/common_theme.dart';
 import 'package:kiosk/utils/kiosk_helper.dart';
 import 'package:kiosk/utils/responsive.dart';
 import 'package:kiosk/utils/text_util.dart';
+import 'package:kiosk/providers/user_activity_provider.dart'; // ★ 프로바이더 임포트
 
 class ProductDetailDialog extends ConsumerStatefulWidget {
   final ProductModel product;
-  final Function(int quantity) onAddCart;
+  final Function(ProductModel product, int quantity) onAddCart;
 
   const ProductDetailDialog({
     super.key,
@@ -32,19 +34,75 @@ class _ProductDetailDialogState extends ConsumerState<ProductDetailDialog> {
     final rs = Responsive(context);
     final product = widget.product;
     final bool isMobile = rs.isMobile || rs.isTablet;
+    final remainingSeconds = ref.watch(remainingSecondsProvider);
 
-    return Dialog(
-      insetPadding: EdgeInsets.all(rs.padding(16)),
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(rs.radius(24))),
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        width: isMobile ? rs.w(0.95) : rs.w(0.7),
-        height: isMobile ? rs.h(0.85) : rs.h(0.75),
-        constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 750),
-        child: isMobile
-            ? _buildMobileLayout(context, rs, product)
-            : _buildDesktopLayout(context, rs, product),
+    return Listener(
+      onPointerDown: (_) {
+        ref.read(userActivityProvider.notifier).state++;
+      },
+      behavior: HitTestBehavior.translucent,
+      child: Stack(
+        alignment: Alignment.topCenter,
+        clipBehavior: Clip.none,
+        children: [
+          // 본래 다이얼로그
+          Dialog(
+            insetPadding: EdgeInsets.all(rs.padding(16)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(rs.radius(24))),
+            clipBehavior: Clip.antiAlias,
+            child: Container(
+              width: isMobile ? rs.w(0.95) : rs.w(0.7),
+              height: isMobile ? rs.h(0.85) : rs.h(0.75),
+              constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 750),
+              child: isMobile
+                  ? _buildMobileLayout(context, rs, product)
+                  : _buildDesktopLayout(context, rs, product),
+            ),
+          ),
+
+          // ★ 10초 이하일 때 다이얼로그 최상단 위에 뜨는 카운트다운 경고 배너
+          if (remainingSeconds <= 10)
+            Positioned(
+              top: 10,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.orangeAccent, width: 1.5),
+                    boxShadow: const [
+                      BoxShadow(
+                          color: Colors.black45,
+                          blurRadius: 10,
+                          offset: Offset(0, 4))
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '⚠️ $remainingSeconds초 후 화면이 초기화됩니다!',
+                        style: const TextStyle(
+                          color: Colors.orangeAccent,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        '화면을 터치하면 계속 주문할 수 있습니다.',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -81,6 +139,7 @@ class _ProductDetailDialogState extends ConsumerState<ProductDetailDialog> {
   Widget _buildInfoSection(
       BuildContext context, Responsive rs, ProductModel product) {
     final allProducts = ref.watch(productProvider).value ?? [];
+    final bool canAddToCart = !product.isSoldOut && product.stock > 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,10 +259,12 @@ class _ProductDetailDialogState extends ConsumerState<ProductDetailDialog> {
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: () {
-                widget.onAddCart(quantity);
-                Navigator.pop(context);
-              },
+              onPressed: canAddToCart
+                  ? () {
+                      widget.onAddCart(widget.product, quantity);
+                      Navigator.pop(context);
+                    }
+                  : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: PageColors.cateSelect,
                 foregroundColor: Colors.white,
@@ -212,7 +273,7 @@ class _ProductDetailDialogState extends ConsumerState<ProductDetailDialog> {
                     borderRadius: BorderRadius.circular(16)),
               ),
               child: Text(
-                '장바구니 담기',
+                canAddToCart ? '장바구니 담기' : '품절된 상품입니다',
                 style: TextStyle(
                     fontSize: rs.font(18), fontWeight: FontWeight.bold),
               ),
@@ -228,7 +289,11 @@ class _ProductDetailDialogState extends ConsumerState<ProductDetailDialog> {
       ProductModel product, List<ProductModel> allProducts) {
     // 현재 단품(product.id)을 구성품으로 포함하고 있는 세트 상품 탐색
     final matchingSets = allProducts
-        .where((p) => p.isSet && p.componentIds.contains(product.id))
+        .where((p) =>
+            p.isSet &&
+            p.componentIds.contains(product.id) &&
+            !p.isSoldOut &&
+            p.stock > 0)
         .toList();
 
     if (matchingSets.isEmpty) return const SizedBox.shrink();

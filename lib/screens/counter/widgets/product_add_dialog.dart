@@ -109,14 +109,6 @@ class _ProductAddDialogState extends ConsumerState<ProductAddDialog> {
   /// 상품 저장 로직
   Future<void> _saveProduct() async {
     if (!_formKey.currentState!.validate()) return;
-
-    if (_thumbnailFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('상품 썸네일 이미지를 등록해 주세요.')),
-      );
-      return;
-    }
-
     setState(() => _isSaving = true);
     try {
       final appDir = await getApplicationDocumentsDirectory();
@@ -125,20 +117,21 @@ class _ProductAddDialogState extends ConsumerState<ProductAddDialog> {
 
       List<ProductImageModel> imageModels = [];
 
-      // A. 크롭된 썸네일 이미지 저장 (isThumbnail: true, sortOrder: 0)
-      final thumbName = 'thumb_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final thumbPath = p.join(productDir.path, thumbName);
-      await ImageUtil.compressAndSave(_thumbnailFile!, thumbPath);
+      // A. 크롭된 썸네일 이미지가 존재할 경우에만 저장 (isThumbnail: true, sortOrder: 0)
+      if (_thumbnailFile != null) {
+        final thumbName = 'thumb_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final thumbPath = p.join(productDir.path, thumbName);
+        await ImageUtil.compressAndSave(_thumbnailFile!, thumbPath);
 
-      imageModels.add(ProductImageModel(
-        id: 0,
-        productId: 0,
-        imagePath: thumbPath,
-        isThumbnail: true,
-        sortOrder: 0,
-        createdAt: DateTime.now(),
-      ));
-
+        imageModels.add(ProductImageModel(
+          id: 0,
+          productId: 0,
+          imagePath: thumbPath,
+          isThumbnail: true,
+          sortOrder: 0,
+          createdAt: DateTime.now(),
+        ));
+      }
       // B. 상세 원본 이미지들 저장 (isThumbnail: false, sortOrder: 1, 2, ...)
       for (int i = 0; i < _detailImages.length; i++) {
         final file = _detailImages[i];
@@ -152,7 +145,7 @@ class _ProductAddDialogState extends ConsumerState<ProductAddDialog> {
           productId: 0,
           imagePath: localPath,
           isThumbnail: false,
-          sortOrder: i + 1,
+          sortOrder: imageModels.length, // 썸네일 유무에 맞춰 순서 할당
           createdAt: DateTime.now(),
         ));
       }
@@ -163,7 +156,7 @@ class _ProductAddDialogState extends ConsumerState<ProductAddDialog> {
         basePrice: int.parse(_priceController.text),
         stock: int.parse(_stockController.text),
         description: _descController.text,
-        images: imageModels,
+        images: imageModels, // 이미지가 없으면 빈 리스트 전달 -> noImage로 자동 렌더링
         isAvailable: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
